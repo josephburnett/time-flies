@@ -45,32 +45,40 @@ func ParseWeek(record string) (*types.Week, error) {
 	week := &types.Week{
 		Date:   t,
 		Header: message.Header,
-		Body:   []*types.Entry{},
+		Done:   []*types.Entry{},
+		Todo:   []*types.Entry{},
 	}
 	for _, line := range strings.Split(string(body), "\n") {
-		entry, ok, err := ParseEntry(line)
+		line = dewhite(line)
+		if line == "" {
+			continue
+		}
+		entry, done, err := ParseEntry(line)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
-			continue
+		if done {
+			week.Done = append(week.Done, entry)
+		} else {
+			week.Todo = append(week.Todo, entry)
 		}
-		week.Body = append(week.Body, entry)
 	}
 	return week, nil
 }
 
 func ParseEntry(line string) (*types.Entry, bool, error) {
+	done := true
 	line = dewhite(line)
 	if len(line) > 1 && line[0] == '#' {
-		return nil, false, nil
+		done = false
+		line = strings.TrimSpace(line)
 	}
 	components := strings.Split(line, "##")
 	if len(components) == 1 {
 		return &types.Entry{
 			Line:   line,
 			Labels: map[string]string{},
-		}, true, nil
+		}, done, nil
 	}
 	last := components[len(components)-1]
 	cut := len(line) - len(last)
@@ -83,7 +91,7 @@ func ParseEntry(line string) (*types.Entry, bool, error) {
 	return &types.Entry{
 		Line:   line,
 		Labels: labels,
-	}, true, nil
+	}, done, nil
 }
 
 func parseLabels(line string) (map[string]string, error) {

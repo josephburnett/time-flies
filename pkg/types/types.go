@@ -9,7 +9,8 @@ type Log []*Week
 type Week struct {
 	Date   time.Time
 	Header map[string][]string
-	Body   []*Entry
+	Done   []*Entry
+	Todo   []*Entry
 }
 
 type Entry struct {
