@@ -7,8 +7,9 @@ import (
 type Log []*Week
 
 type Week struct {
-	Date time.Time
-	Body []*Entry
+	Date   time.Time
+	Header map[string][]string
+	Body   []*Entry
 }
 
 type Entry struct {

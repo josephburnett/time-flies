@@ -36,21 +36,24 @@ func ParseWeek(record string) (*types.Week, error) {
 	if len(date) > 1 {
 		return nil, fmt.Errorf("duplicate 'Date' header:\n%v", record)
 	}
+	header := message.Header
+	delete(header, "Date")
 	t, err := time.Parse("January 2, 2006", date[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid date 'January 2, 2006' date format: %v", date)
 	}
 	week := &types.Week{
-		Date: t,
-		Body: []*types.Entry{},
+		Date:   t,
+		Header: message.Header,
+		Body:   []*types.Entry{},
 	}
 	for _, line := range strings.Split(string(body), "\n") {
 		entry, ok, err := ParseEntry(line)
-		if !ok {
-			continue
-		}
 		if err != nil {
 			return nil, err
+		}
+		if !ok {
+			continue
 		}
 		week.Body = append(week.Body, entry)
 	}
@@ -70,10 +73,12 @@ func ParseEntry(line string) (*types.Entry, bool, error) {
 		}, true, nil
 	}
 	last := components[len(components)-1]
-	labels, err := parseLabels(line[len(line)-len(last):])
+	cut := len(line) - len(last)
+	labels, err := parseLabels(line[cut:])
 	if err != nil {
 		return nil, false, err
 	}
+	line = line[:cut-2]
 	line = dewhite(line)
 	return &types.Entry{
 		Line:   line,
@@ -85,9 +90,12 @@ func parseLabels(line string) (map[string]string, error) {
 	line = dewhite(line)
 	labels := map[string]string{}
 	for _, pair := range strings.Split(line, " ") {
+		if pair == "" {
+			continue
+		}
 		kv := strings.Split(pair, "=")
 		if len(kv) != 2 {
-			return nil, fmt.Errorf("malformed 'k=v' labels: %v", labels)
+			return nil, fmt.Errorf("malformed 'k=v' labels: %q", pair)
 		}
 		labels[kv[0]] = kv[1]
 	}
@@ -95,5 +103,6 @@ func parseLabels(line string) (map[string]string, error) {
 }
 
 func dewhite(s string) string {
-	return regexp.MustCompile(`\s+`).ReplaceAllString(s, "")
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
+	return strings.TrimSpace(s)
 }
