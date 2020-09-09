@@ -71,7 +71,7 @@ func ParseEntry(line string) (*types.Entry, bool, error) {
 	line = dewhite(line)
 	if len(line) > 1 && line[0] == '#' {
 		done = false
-		line = strings.TrimSpace(line)
+		line = strings.TrimSpace(line[1:])
 	}
 	components := strings.Split(line, "##")
 	if len(components) == 1 {
