@@ -10,13 +10,37 @@ import (
 )
 
 func main() {
+	root := &cobra.Command{
+		Use:   "tf",
+		Short: "Time Flies (tf) is a tool for budgeting focus time.",
+	}
+	root.AddCommand(cmdTodo)
 	root.AddCommand(cmdJson)
 	root.Execute()
 }
 
-var root = &cobra.Command{
-	Use:   "tf",
-	Short: "Time Flies (tf) is a tool for budgeting focus time.",
+var cmdTodo = &cobra.Command{
+	Use:   "todo [log file]",
+	Short: "Output the current week's TODO list.",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		bytes, err := ioutil.ReadFile(args[0])
+		if err != nil {
+			return err
+		}
+		log, err := parse.ParseLog(string(bytes))
+		if err != nil {
+			return err
+		}
+		if len(log) == 0 {
+			return nil
+		}
+		last := log[len(log)-1]
+		for _, entry := range last.Todo {
+			fmt.Println(entry.Line)
+		}
+		return nil
+	},
 }
 
 var cmdJson = &cobra.Command{
