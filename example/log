@@ -1,9 +1,9 @@
 Date: September 7, 2020
 
-feed the dog ## cat=home
-feed the cat ## cat=home
-email bob ## cat=work proj=tables
-# do the thing ## cat=work proj=tables
+feed the dog ## cat=home sub=dinner
+feed the cat ## cat=home sub=lunch
+email bob ## cat=work sub=tables
+# do the thing ## cat=work sub=tables
 # try harder
 
 %%
@@ -11,4 +11,12 @@ Date: September 14, 2020
 Labels: cat=work
 
 # succeed
-# email success ## proj=tables
+# email success ## sub=tables
+
+%%
+Date: September 21, 2020
+
+hard work 1 ## cat=work sub=one
+hard work 2 ## cat=work sub=two
+hard work 3 ## cat=work sub=three
+hard work 3.1 ## cat=work sub=three

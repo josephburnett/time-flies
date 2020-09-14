@@ -20,6 +20,7 @@ type SubTotal struct {
 	Value     string
 	Relative  float64
 	Absolute  time.Duration
+	Count     int
 	SubTotals []*SubTotal
 }
 
@@ -71,7 +72,7 @@ func (c *Config) getTotal(week *types.Week) (*Total, error) {
 		Period:   Weekly,
 		Absolute: time.Duration(c.DaysPerWeek) * time.Duration(c.HoursPerDay) * time.Hour,
 	}
-	subTotals, err := c.getSubTotals(1, week)
+	subTotals, err := c.getSubTotals(1, 1.0, total.Absolute, week.Done)
 	if err != nil {
 		return nil, err
 	}
@@ -79,20 +80,20 @@ func (c *Config) getTotal(week *types.Week) (*Total, error) {
 	return total, nil
 }
 
-func (c *Config) getSubTotals(groupingLevel int, week *types.Week) ([]*SubTotal, error) {
+func (c *Config) getSubTotals(groupingLevel int, relative float64, absolute time.Duration, done []*types.Entry) ([]*SubTotal, error) {
 	if groupingLevel > len(c.Grouping) {
 		return []*SubTotal{}, nil
 	}
 	key := c.Grouping[groupingLevel-1]
-	// TODO: size by grouping above (for sub-subtotals)
 	var relativePerEntry float64
 	var absolutePerEntry time.Duration
-	if len(week.Done) > 0 {
-		relativePerEntry = 1.0 / float64(len(week.Done))
-		absolutePerEntry = time.Duration(c.DaysPerWeek) * time.Duration(c.HoursPerDay) * time.Hour / time.Duration(len(week.Done))
+	if len(done) > 0 {
+		relativePerEntry = relative / float64(len(done))
+		absolutePerEntry = absolute / time.Duration(len(done))
 	}
 	subTotalsByValue := map[string]*SubTotal{}
-	for _, entry := range week.Done {
+	doneByValue := map[string][]*types.Entry{}
+	for _, entry := range done {
 		value, ok := entry.Labels[key]
 		if !ok {
 			value = ""
@@ -108,10 +109,16 @@ func (c *Config) getSubTotals(groupingLevel int, week *types.Week) ([]*SubTotal,
 		}
 		s.Relative += relativePerEntry
 		s.Absolute += absolutePerEntry
+		s.Count += 1
+		doneByValue[value] = append(doneByValue[value], entry)
 	}
-	// TODO: calculate sub-subtotals
 	subTotals := []*SubTotal{}
 	for _, s := range subTotalsByValue {
+		ss, err := c.getSubTotals(groupingLevel+1, s.Relative, s.Absolute, doneByValue[s.Value])
+		if err != nil {
+			return nil, err
+		}
+		s.SubTotals = ss
 		subTotals = append(subTotals, s)
 	}
 	return subTotals, nil
