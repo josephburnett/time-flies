@@ -24,8 +24,10 @@ type SubTotal struct {
 }
 
 type Config struct {
-	Period   Period
-	Grouping []string
+	Period      Period
+	DaysPerWeek int
+	HoursPerDay int
+	Grouping    []string
 }
 
 type Period string
@@ -46,11 +48,11 @@ var defaultConfig = &Config{
 	},
 }
 
-func GetTotals(log Log) (Totals, error) {
+func GetTotals(log types.Log) (Totals, error) {
 	return defaultConfig.GetTotals(log)
 }
 
-func (c *Config) GetTotals(log Log) (Totals, error) {
+func (c *Config) GetTotals(log types.Log) (Totals, error) {
 	totals := make(Totals, 0)
 	for _, week := range log {
 		total, err := c.getTotal(week)
@@ -69,7 +71,7 @@ func (c *Config) getTotal(week *types.Week) (*Total, error) {
 		Period:   Weekly,
 		Absolute: time.Duration(c.DaysPerWeek) * time.Duration(c.HoursPerDay) * time.Hour,
 	}
-	subTotals, err := c.getSubTotals(0, week*types.Week)
+	subTotals, err := c.getSubTotals(1, week)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +80,17 @@ func (c *Config) getTotal(week *types.Week) (*Total, error) {
 }
 
 func (c *Config) getSubTotals(groupingLevel int, week *types.Week) ([]*SubTotal, error) {
-	key := c.Grouping[groupingLevel]
+	if groupingLevel > len(c.Grouping) {
+		return []*SubTotal{}, nil
+	}
+	key := c.Grouping[groupingLevel-1]
+	// TODO: size by grouping above (for sub-subtotals)
+	var relativePerEntry float64
+	var absolutePerEntry time.Duration
+	if len(week.Done) > 0 {
+		relativePerEntry = 1.0 / float64(len(week.Done))
+		absolutePerEntry = time.Duration(c.DaysPerWeek) * time.Duration(c.HoursPerDay) * time.Hour / time.Duration(len(week.Done))
+	}
 	subTotalsByValue := map[string]*SubTotal{}
 	for _, entry := range week.Done {
 		value, ok := entry.Labels[key]
@@ -88,14 +100,16 @@ func (c *Config) getSubTotals(groupingLevel int, week *types.Week) ([]*SubTotal,
 		s, ok := subTotalsByValue[value]
 		if !ok {
 			s = &SubTotal{
-				Label: key,
-				Value: value,
+				Label:     key,
+				Value:     value,
+				SubTotals: []*SubTotal{},
 			}
 			subTotalsByValue[value] = s
 		}
-		s.Relative += relativePerEntry // TODO: calculate this
-		s.Absolute += relativePerEntry //
+		s.Relative += relativePerEntry
+		s.Absolute += absolutePerEntry
 	}
+	// TODO: calculate sub-subtotals
 	subTotals := []*SubTotal{}
 	for _, s := range subTotalsByValue {
 		subTotals = append(subTotals, s)
