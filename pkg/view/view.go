@@ -1,6 +1,7 @@
 package view
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -34,15 +35,19 @@ func (c *Config) PrintTotals(totals budget.Totals) (string, error) {
 func (c *Config) printTotal(total *budget.Total) (string, error) {
 	screenWidth := float64(c.ScreenWidth)
 	widthByValue := map[string]int{}
-	sortedValues := []string{}
+	uniqueValues := map[string]bool{}
 	for _, sub := range total.SubTotals {
 		value := sub.Value
-		sortedValues = append(sortedValues, value)
+		uniqueValues[value] = true
 		width := int(sub.Relative * screenWidth)
 		widthByValue[value] = width
 	}
+	sortedValues := []string{}
+	for value := range uniqueValues {
+		sortedValues = append(sortedValues, value)
+	}
 	sort.Strings(sortedValues)
-	out := "|"
+	out := fmt.Sprintf(" %v |", total.Date.Format("Jan 02 2006"))
 	for _, value := range sortedValues {
 		width := widthByValue[value]
 		if len(value) > width {

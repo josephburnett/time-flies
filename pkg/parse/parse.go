@@ -38,7 +38,7 @@ func ParseWeek(record string) (*types.Week, error) {
 	}
 	header := message.Header
 	delete(header, "Date")
-	t, err := time.Parse("January 2, 2006", date[0])
+	t, err := parseDate(date[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid date 'January 2, 2006' date format: %v", date)
 	}
@@ -64,6 +64,22 @@ func ParseWeek(record string) (*types.Week, error) {
 		}
 	}
 	return week, nil
+}
+
+func parseDate(s string) (time.Time, error) {
+	t, err := time.Parse("January 2, 2006", s)
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse("Jan 2, 2006", s)
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse("Jan 2 2006", s)
+	if err == nil {
+		return t, nil
+	}
+	return time.Time{}, fmt.Errorf("could not parse date: %v", s)
 }
 
 func ParseEntry(line string) (*types.Entry, bool, error) {
