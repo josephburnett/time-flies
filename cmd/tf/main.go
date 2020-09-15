@@ -7,6 +7,7 @@ import (
 
 	"github.com/josephburnett/time-flies/pkg/budget"
 	"github.com/josephburnett/time-flies/pkg/parse"
+	"github.com/josephburnett/time-flies/pkg/view"
 	"github.com/spf13/cobra"
 )
 
@@ -38,11 +39,11 @@ var cmdTotals = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		s, err := json.MarshalIndent(tots, "", "  ")
+		out, err := view.PrintTotals(tots)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%v\n", string(s))
+		fmt.Printf("%v\n", string(out))
 		return nil
 	},
 }
