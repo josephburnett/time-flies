@@ -21,9 +21,20 @@ func PrintTotals(totals budget.Totals) (string, error) {
 }
 
 func (c *Config) PrintTotals(totals budget.Totals) (string, error) {
+	uniqueValues := map[string]bool{}
+	for _, t := range totals {
+		for _, s := range t.SubTotals {
+			uniqueValues[s.Value] = true
+		}
+	}
+	sortedValues := []string{}
+	for v := range uniqueValues {
+		sortedValues = append(sortedValues, v)
+	}
+	sort.Strings(sortedValues)
 	out := ""
 	for _, total := range totals {
-		line, err := c.printTotal(total)
+		line, err := c.printTotal(total, sortedValues)
 		if err != nil {
 			return "", nil
 		}
@@ -32,31 +43,28 @@ func (c *Config) PrintTotals(totals budget.Totals) (string, error) {
 	return out, nil
 }
 
-func (c *Config) printTotal(total *budget.Total) (string, error) {
+func (c *Config) printTotal(total *budget.Total, values []string) (string, error) {
 	screenWidth := float64(c.ScreenWidth)
-	widthByValue := map[string]int{}
-	uniqueValues := map[string]bool{}
+	widthByValue := map[string]float64{}
 	for _, sub := range total.SubTotals {
-		value := sub.Value
-		uniqueValues[value] = true
-		width := int(sub.Relative * screenWidth)
-		widthByValue[value] = width
+		widthByValue[sub.Value] = sub.Relative * screenWidth
 	}
-	sortedValues := []string{}
-	for value := range uniqueValues {
-		sortedValues = append(sortedValues, value)
-	}
-	sort.Strings(sortedValues)
 	out := fmt.Sprintf(" %v |", total.Date.Format("Jan 02 2006"))
-	for _, value := range sortedValues {
+	var cursor float64
+	for _, value := range values {
 		width := widthByValue[value]
-		if len(value) > width {
-			value = value[:width]
+		chars := int(cursor+width) - int(cursor)
+		cursor += width
+		if len(value) > chars {
+			value = value[:chars]
 		}
-		pad := width - len(value)
+		pad := chars - len(value)
 		out += strings.Repeat("-", pad/2)
 		out += value
 		out += strings.Repeat("-", pad/2)
+		if pad%2 == 1 {
+			out += "-"
+		}
 		out += "|"
 	}
 	return out, nil
