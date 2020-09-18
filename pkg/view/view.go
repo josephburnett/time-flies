@@ -8,6 +8,27 @@ import (
 	"github.com/josephburnett/time-flies/pkg/budget"
 )
 
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+	colorPurple = "\033[35m"
+	colorCyan   = "\033[36m"
+	colorWhite  = "\033[37m"
+)
+
+var colorIndex = []string{
+	colorRed,
+	colorGreen,
+	colorYellow,
+	colorBlue,
+	colorPurple,
+	colorCyan,
+	colorWhite,
+}
+
 type Config struct {
 	ScreenWidth int
 }
@@ -51,7 +72,7 @@ func (c *Config) printTotal(total *budget.Total, values []string) (string, error
 	}
 	out := fmt.Sprintf(" %v |", total.Date.Format("Jan 02 2006"))
 	var cursor float64
-	for _, value := range values {
+	for i, value := range values {
 		width := widthByValue[value]
 		chars := int(cursor+width) - int(cursor)
 		cursor += width
@@ -59,12 +80,15 @@ func (c *Config) printTotal(total *budget.Total, values []string) (string, error
 			value = value[:chars]
 		}
 		pad := chars - len(value)
+		color := colorIndex[i%len(colorIndex)]
+		out += color
 		out += strings.Repeat("-", pad/2)
 		out += value
 		out += strings.Repeat("-", pad/2)
 		if pad%2 == 1 {
 			out += "-"
 		}
+		out += colorReset
 		out += "|"
 	}
 	return out, nil
