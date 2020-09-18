@@ -8,6 +8,8 @@ import (
 	"github.com/josephburnett/time-flies/pkg/budget"
 	"github.com/josephburnett/time-flies/pkg/parse"
 	"github.com/josephburnett/time-flies/pkg/view"
+
+	"github.com/josephburnett/time-flies/pkg/tidy"
 	"github.com/spf13/cobra"
 )
 
@@ -16,10 +18,33 @@ func main() {
 		Use:   "tf",
 		Short: "Time Flies (tf) is a tool for budgeting focus time.",
 	}
+	root.AddCommand(cmdTidy)
 	root.AddCommand(cmdTotals)
 	root.AddCommand(cmdTodo)
 	root.AddCommand(cmdJson)
 	root.Execute()
+}
+
+var cmdTidy = &cobra.Command{
+	Use:   "tidy [log file]",
+	Short: "Reformats log to spark joy.",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		bytes, err := ioutil.ReadFile(args[0])
+		if err != nil {
+			return err
+		}
+		log, err := parse.ParseLog(string(bytes))
+		if err != nil {
+			return err
+		}
+		s, err := tidy.PrintLog(log)
+		if err != nil {
+			return err
+		}
+		fmt.Print(s)
+		return nil
+	},
 }
 
 var cmdTotals = &cobra.Command{
