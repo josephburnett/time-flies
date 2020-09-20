@@ -29,19 +29,27 @@ var colorIndex = []string{
 	colorWhite,
 }
 
-type Config struct {
-	ScreenWidth int
+const (
+	defaultScreenWidth = 80
+	minScreenWidth     = 20
+)
+
+type ViewConfig struct {
+	ScreenWidth *int
 }
 
-var defaultConfig = &Config{
-	ScreenWidth: 80,
+func (c *ViewConfig) screenWidth() int {
+	if c == nil || c.ScreenWidth == nil {
+		return defaultScreenWidth
+	}
+	w := *c.ScreenWidth
+	if w < minScreenWidth {
+		return minScreenWidth
+	}
+	return w
 }
 
-func PrintTotals(totals budget.Totals) (string, error) {
-	return defaultConfig.PrintTotals(totals)
-}
-
-func (c *Config) PrintTotals(totals budget.Totals) (string, error) {
+func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 	uniqueValues := map[string]bool{}
 	for _, t := range totals {
 		for _, s := range t.SubTotals {
@@ -64,8 +72,8 @@ func (c *Config) PrintTotals(totals budget.Totals) (string, error) {
 	return out, nil
 }
 
-func (c *Config) printTotal(total *budget.Total, values []string) (string, error) {
-	screenWidth := float64(c.ScreenWidth)
+func (c *ViewConfig) printTotal(total *budget.Total, values []string) (string, error) {
+	screenWidth := float64(c.screenWidth())
 	widthByValue := map[string]float64{}
 	for _, sub := range total.SubTotals {
 		widthByValue[sub.Value] = sub.Relative * screenWidth

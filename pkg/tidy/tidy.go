@@ -8,11 +8,13 @@ import (
 	"github.com/josephburnett/time-flies/pkg/types"
 )
 
-func PrintLog(log types.Log) (string, error) {
+type TidyConfig struct{}
+
+func (c *TidyConfig) SprintLog(log types.Log) (string, error) {
 	sort.Slice(log, func(i, j int) bool { return log[i].Date.After(log[j].Date) })
 	out := ""
 	for i, week := range log {
-		s, err := printWeek(week)
+		s, err := c.printWeek(week)
 		if err != nil {
 			return "", err
 		}
@@ -24,7 +26,7 @@ func PrintLog(log types.Log) (string, error) {
 	return out, nil
 }
 
-func printWeek(week *types.Week) (string, error) {
+func (c *TidyConfig) printWeek(week *types.Week) (string, error) {
 	out := fmt.Sprintf("Date: %v\n", week.Date.Format("Jan 02 2006"))
 	for k, vs := range week.Header {
 		for _, v := range vs {
@@ -46,7 +48,7 @@ func printWeek(week *types.Week) (string, error) {
 	for _, entry := range week.Done {
 		out += entry.Line
 		out += strings.Repeat(" ", maxWidth-len(entry.Line))
-		s, err := printLabels(entry.Labels)
+		s, err := c.printLabels(entry.Labels)
 		if err != nil {
 			return "", err
 		}
@@ -55,7 +57,7 @@ func printWeek(week *types.Week) (string, error) {
 	for _, entry := range week.Todo {
 		out += fmt.Sprintf("# %v", entry.Line)
 		out += strings.Repeat(" ", maxWidth-len(entry.Line)-2)
-		s, err := printLabels(entry.Labels)
+		s, err := c.printLabels(entry.Labels)
 		if err != nil {
 			return "", err
 		}
@@ -65,7 +67,7 @@ func printWeek(week *types.Week) (string, error) {
 	return out, nil
 }
 
-func printLabels(labels map[string]string) (string, error) {
+func (c *TidyConfig) printLabels(labels map[string]string) (string, error) {
 	out := ""
 	for k, v := range labels {
 		out += fmt.Sprintf(" %v=%v", k, v)

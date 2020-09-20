@@ -1,4 +1,4 @@
-package parse
+package file
 
 import (
 	"fmt"
@@ -11,10 +11,29 @@ import (
 	"github.com/josephburnett/time-flies/pkg/types"
 )
 
-func ParseLog(recordJar string) (types.Log, error) {
+type FileConfig struct {
+	LogFile *string
+}
+
+func (c *FileConfig) logFile() string {
+	if c == nil || c.LogFile == nil {
+		return ""
+	}
+	return *c.LogFile
+}
+
+func (c *FileConfig) Read() (types.Log, error) {
+	bs, err := ioutil.ReadFile(c.logFile())
+	if err != nil {
+		return nil, err
+	}
+	return c.ParseLog(string(bs))
+}
+
+func (c *FileConfig) ParseLog(recordJar string) (types.Log, error) {
 	log := []*types.Week{}
 	for _, record := range strings.Split(recordJar, "%%\n") {
-		week, err := ParseWeek(record)
+		week, err := c.ParseWeek(record)
 		if err != nil {
 			return nil, err
 		}
@@ -23,7 +42,7 @@ func ParseLog(recordJar string) (types.Log, error) {
 	return log, nil
 }
 
-func ParseWeek(record string) (*types.Week, error) {
+func (c *FileConfig) ParseWeek(record string) (*types.Week, error) {
 	message, err := mail.ReadMessage(strings.NewReader(record))
 	if err != nil {
 		return nil, err
@@ -38,7 +57,7 @@ func ParseWeek(record string) (*types.Week, error) {
 	}
 	header := message.Header
 	delete(header, "Date")
-	t, err := parseDate(date[0])
+	t, err := c.parseDate(date[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid date 'January 2, 2006' date format: %v", date)
 	}
@@ -49,11 +68,11 @@ func ParseWeek(record string) (*types.Week, error) {
 		Todo:   []*types.Entry{},
 	}
 	for _, line := range strings.Split(string(body), "\n") {
-		line = dewhite(line)
+		line = c.dewhite(line)
 		if line == "" {
 			continue
 		}
-		entry, done, err := ParseEntry(line)
+		entry, done, err := c.ParseEntry(line)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +85,7 @@ func ParseWeek(record string) (*types.Week, error) {
 	return week, nil
 }
 
-func parseDate(s string) (time.Time, error) {
+func (c *FileConfig) parseDate(s string) (time.Time, error) {
 	t, err := time.Parse("January 2, 2006", s)
 	if err == nil {
 		return t, nil
@@ -82,9 +101,9 @@ func parseDate(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("could not parse date: %v", s)
 }
 
-func ParseEntry(line string) (*types.Entry, bool, error) {
+func (c *FileConfig) ParseEntry(line string) (*types.Entry, bool, error) {
 	done := true
-	line = dewhite(line)
+	line = c.dewhite(line)
 	if len(line) > 1 && line[0] == '#' {
 		done = false
 		line = strings.TrimSpace(line[1:])
@@ -98,20 +117,20 @@ func ParseEntry(line string) (*types.Entry, bool, error) {
 	}
 	last := components[len(components)-1]
 	cut := len(line) - len(last)
-	labels, err := parseLabels(line[cut:])
+	labels, err := c.parseLabels(line[cut:])
 	if err != nil {
 		return nil, false, err
 	}
 	line = line[:cut-2]
-	line = dewhite(line)
+	line = c.dewhite(line)
 	return &types.Entry{
 		Line:   line,
 		Labels: labels,
 	}, done, nil
 }
 
-func parseLabels(line string) (map[string]string, error) {
-	line = dewhite(line)
+func (c *FileConfig) parseLabels(line string) (map[string]string, error) {
+	line = c.dewhite(line)
 	labels := map[string]string{}
 	for _, pair := range strings.Split(line, " ") {
 		if pair == "" {
@@ -126,7 +145,7 @@ func parseLabels(line string) (map[string]string, error) {
 	return labels, nil
 }
 
-func dewhite(s string) string {
+func (c *FileConfig) dewhite(s string) string {
 	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
 	return strings.TrimSpace(s)
 }

@@ -24,36 +24,61 @@ type SubTotal struct {
 	SubTotals []*SubTotal
 }
 
-type Config struct {
-	Period      Period
-	DaysPerWeek int
-	HoursPerDay int
-	Grouping    []string
-}
-
 type Period string
 
 const (
 	Weekly    Period = "Weekly"
 	Monthly          = "Monthly"
 	Quarterly        = "Quarterly"
+
+	defaultEntryPeriod = Weekly
+	defaultDaysPerWeek = 5
+	defaultHoursPerDay = 8
 )
 
-var defaultConfig = &Config{
-	Period:      Weekly,
-	DaysPerWeek: 5,
-	HoursPerDay: 8,
-	Grouping: []string{
+var (
+	defaultLabelGrouping = []string{
 		"cat",
 		"sub",
-	},
+	}
+)
+
+type BudgetConfig struct {
+	EntryPeriod   *Period
+	DaysPerWeek   *int
+	HoursPerDay   *int
+	LabelGrouping []string
 }
 
-func GetTotals(log types.Log) (Totals, error) {
-	return defaultConfig.GetTotals(log)
+func (c *BudgetConfig) entryPeriod() Period {
+	if c == nil || c.EntryPeriod == nil {
+		return defaultEntryPeriod
+	}
+	return *c.EntryPeriod
 }
 
-func (c *Config) GetTotals(log types.Log) (Totals, error) {
+func (c *BudgetConfig) daysPerWeek() int {
+	if c == nil || c.DaysPerWeek == nil {
+		return defaultDaysPerWeek
+	}
+	return *c.DaysPerWeek
+}
+
+func (c *BudgetConfig) hoursPerDay() int {
+	if c == nil || c.HoursPerDay == nil {
+		return defaultHoursPerDay
+	}
+	return *c.HoursPerDay
+}
+
+func (c *BudgetConfig) labelGrouping() []string {
+	if c == nil || len(c.LabelGrouping) == 0 {
+		return defaultLabelGrouping
+	}
+	return c.LabelGrouping
+}
+
+func (c *BudgetConfig) GetTotals(log types.Log) (Totals, error) {
 	totals := make(Totals, 0)
 	for _, week := range log {
 		total, err := c.getTotal(week)
@@ -65,12 +90,12 @@ func (c *Config) GetTotals(log types.Log) (Totals, error) {
 	return totals, nil
 }
 
-func (c *Config) getTotal(week *types.Week) (*Total, error) {
+func (c *BudgetConfig) getTotal(week *types.Week) (*Total, error) {
 	total := &Total{
 		Date: week.Date,
 		// assuming weekly period
 		Period:   Weekly,
-		Absolute: time.Duration(c.DaysPerWeek) * time.Duration(c.HoursPerDay) * time.Hour,
+		Absolute: time.Duration(c.daysPerWeek()) * time.Duration(c.hoursPerDay()) * time.Hour,
 	}
 	subTotals, err := c.getSubTotals(1, 1.0, total.Absolute, week.Done)
 	if err != nil {
@@ -80,11 +105,11 @@ func (c *Config) getTotal(week *types.Week) (*Total, error) {
 	return total, nil
 }
 
-func (c *Config) getSubTotals(groupingLevel int, relative float64, absolute time.Duration, done []*types.Entry) ([]*SubTotal, error) {
-	if groupingLevel > len(c.Grouping) {
+func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolute time.Duration, done []*types.Entry) ([]*SubTotal, error) {
+	if groupingLevel > len(c.labelGrouping()) {
 		return []*SubTotal{}, nil
 	}
-	key := c.Grouping[groupingLevel-1]
+	key := c.labelGrouping()[groupingLevel-1]
 	var relativePerEntry float64
 	var absolutePerEntry time.Duration
 	if len(done) > 0 {
