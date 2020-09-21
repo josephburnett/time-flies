@@ -17,14 +17,12 @@ type Config struct {
 	view.ViewConfig
 }
 
-var cfg = &Config{}
-
 var CmdTidy = &cobra.Command{
-	Use:   "tidy [log file]",
+	Use:   "tidy",
 	Short: "Reformats log to spark joy.",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg.LogFile = &args[0]
+		cfg := &Config{}
 		log, err := cfg.FileConfig.Read()
 		if err != nil {
 			return err
@@ -39,11 +37,11 @@ var CmdTidy = &cobra.Command{
 }
 
 var CmdTotals = &cobra.Command{
-	Use:   "tots [log file]",
+	Use:   "tots",
 	Short: "Output weekly focus totals.",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg.LogFile = &args[0]
+		cfg := &Config{}
 		log, err := cfg.FileConfig.Read()
 		if err != nil {
 			return err

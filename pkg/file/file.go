@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/mail"
+	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/josephburnett/time-flies/pkg/types"
+)
+
+const (
+	defaultLogFile = ".tf/log"
 )
 
 type FileConfig struct {
@@ -17,7 +22,8 @@ type FileConfig struct {
 
 func (c *FileConfig) logFile() string {
 	if c == nil || c.LogFile == nil {
-		return ""
+		home := os.Getenv("HOME")
+		return fmt.Sprintf("%v/%v", home, defaultLogFile)
 	}
 	return *c.LogFile
 }
