@@ -17,6 +17,7 @@ const (
 	colorPurple = "\033[35m"
 	colorCyan   = "\033[36m"
 	colorWhite  = "\033[37m"
+	colorGrey   = "\033[90m"
 )
 
 var colorIndex = []string{
@@ -26,7 +27,6 @@ var colorIndex = []string{
 	colorBlue,
 	colorPurple,
 	colorCyan,
-	colorWhite,
 }
 
 const (
@@ -80,15 +80,23 @@ func (c *ViewConfig) printTotal(total *budget.Total, values []string) (string, e
 	}
 	out := fmt.Sprintf(" %v |", total.Date.Format("Jan 02 2006"))
 	var cursor float64
-	for i, value := range values {
+	i := 0
+	for _, value := range values {
 		width := widthByValue[value]
+		var color string
+		if value == "" {
+			color = colorGrey
+			value = "?"
+		} else {
+			color = colorIndex[i%len(colorIndex)]
+			i++
+		}
 		chars := int(cursor+width) - int(cursor)
 		cursor += width
 		if len(value) > chars {
 			value = value[:chars]
 		}
 		pad := chars - len(value)
-		color := colorIndex[i%len(colorIndex)]
 		out += color
 		out += strings.Repeat("-", pad/2)
 		out += value
