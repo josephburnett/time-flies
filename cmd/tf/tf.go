@@ -13,5 +13,6 @@ func main() {
 	}
 	root.AddCommand(tf.CmdTidy)
 	root.AddCommand(tf.CmdTotals)
+	root.AddCommand(tf.CmdEdit)
 	root.Execute()
 }

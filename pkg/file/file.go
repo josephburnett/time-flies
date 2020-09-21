@@ -20,7 +20,7 @@ type FileConfig struct {
 	LogFile *string
 }
 
-func (c *FileConfig) logFile() string {
+func (c *FileConfig) GetLogFile() string {
 	if c == nil || c.LogFile == nil {
 		home := os.Getenv("HOME")
 		return fmt.Sprintf("%v/%v", home, defaultLogFile)
@@ -29,7 +29,7 @@ func (c *FileConfig) logFile() string {
 }
 
 func (c *FileConfig) Read() (types.Log, error) {
-	bs, err := ioutil.ReadFile(c.logFile())
+	bs, err := ioutil.ReadFile(c.GetLogFile())
 	if err != nil {
 		return nil, err
 	}

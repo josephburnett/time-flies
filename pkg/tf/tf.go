@@ -2,6 +2,8 @@ package tf
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/josephburnett/time-flies/pkg/budget"
 	"github.com/josephburnett/time-flies/pkg/file"
@@ -56,5 +58,24 @@ var CmdTotals = &cobra.Command{
 		}
 		fmt.Printf("%v\n", s)
 		return nil
+	},
+}
+
+var CmdEdit = &cobra.Command{
+	Use:   "edit",
+	Short: "Edit the log file.",
+	Args:  cobra.ExactArgs(0),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		editor := os.Getenv("EDITOR")
+		if editor == "" {
+			return fmt.Errorf("no EDITOR set")
+		}
+		cfg := &Config{}
+		filename := cfg.FileConfig.GetLogFile()
+		execCmd := exec.Command(editor, filename)
+		execCmd.Stdin = os.Stdin
+		execCmd.Stdout = os.Stdout
+		execCmd.Stderr = os.Stderr
+		return execCmd.Run()
 	},
 }
