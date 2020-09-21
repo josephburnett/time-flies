@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 
 	"github.com/josephburnett/time-flies/pkg/budget"
 	"github.com/josephburnett/time-flies/pkg/file"
@@ -52,6 +53,7 @@ var CmdTotals = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		sort.Slice(tots, func(i, j int) bool { return tots[i].Date.Before(tots[j].Date) })
 		s, err := cfg.ViewConfig.SprintTotals(tots)
 		if err != nil {
 			return err
