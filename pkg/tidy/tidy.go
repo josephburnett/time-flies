@@ -69,7 +69,13 @@ func (c *TidyConfig) printWeek(week *types.Week) (string, error) {
 
 func (c *TidyConfig) printLabels(labels map[string]string) (string, error) {
 	out := ""
-	for k, v := range labels {
+	keys := []string{}
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := labels[k]
 		out += fmt.Sprintf(" %v=%v", k, v)
 	}
 	return out, nil
