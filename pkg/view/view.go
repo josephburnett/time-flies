@@ -30,7 +30,7 @@ var colorIndex = []string{
 }
 
 const (
-	defaultScreenWidth = 80
+	defaultScreenWidth = 100
 	minScreenWidth     = 20
 )
 
