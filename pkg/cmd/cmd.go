@@ -11,6 +11,7 @@ import (
 	"github.com/josephburnett/time-flies/pkg/tidy"
 	"github.com/josephburnett/time-flies/pkg/view"
 	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
 )
 
 type Config struct {
@@ -19,6 +20,10 @@ type Config struct {
 	tidy.TidyConfig
 	view.ViewConfig
 }
+
+var (
+	period = flag.StringP("period", "p", "", "Aggregation period.")
+)
 
 var CmdTidy = &cobra.Command{
 	Use:   "tidy",
@@ -45,6 +50,10 @@ var CmdTotals = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := &Config{}
+		if *period != "" {
+			p := budget.Period(*period)
+			cfg.BudgetConfig.AggregationPeriod = &p
+		}
 		log, err := cfg.FileConfig.Read()
 		if err != nil {
 			return err
@@ -61,6 +70,10 @@ var CmdTotals = &cobra.Command{
 		fmt.Printf("%v\n", s)
 		return nil
 	},
+}
+
+func init() {
+	CmdTidy.Flags().AddFlag(flag.Lookup("period"))
 }
 
 var CmdEdit = &cobra.Command{

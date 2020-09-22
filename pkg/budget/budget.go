@@ -16,13 +16,15 @@ type Total struct {
 	SubTotals []*SubTotal
 }
 
+type SubTotals []*SubTotal
+
 type SubTotal struct {
 	Label     string
 	Value     string
 	Relative  float64
 	Absolute  time.Duration
 	Count     int
-	SubTotals []*SubTotal
+	SubTotals SubTotals
 }
 
 type Period string
@@ -88,17 +90,19 @@ func (c *BudgetConfig) GetTotals(log types.Log) (Totals, error) {
 		}
 		totals = append(totals, total)
 	}
-	groups, err := c.groupTotals(totals)
-	if err != nil {
-		return nil, err
-	}
-	totals := make(Totals, 0)
-	for _, ts := range groups {
-		t, err := ts.Merge()
+	if c.aggregationPeriod() != Weekly {
+		groups, err := c.groupTotals(totals)
 		if err != nil {
 			return nil, err
 		}
-		totals = append(totals, t)
+		totals = make(Totals, 0)
+		for date, ts := range groups {
+			t, err := ts.mergeOn(date, c.aggregationPeriod())
+			if err != nil {
+				return nil, err
+			}
+			totals = append(totals, t)
+		}
 	}
 	return totals, nil
 }
@@ -161,21 +165,16 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 	return subTotals, nil
 }
 
-func (c *BudgetConfig) groupTotals(totals Totals) ([]Totals, error) {
+func (c *BudgetConfig) groupTotals(totals Totals) (map[time.Time]Totals, error) {
 	totalsByTime := map[time.Time]Totals{}
 	for _, total := range totals {
 		t := c.roundToPeriod(total.Date)
 		totalsByTime[t] = append(totalsByTime[t], total)
 	}
-	groups := []Totals{}
-	for _, ts := range totalsByTime {
-		groups = append(groups, ts)
-	}
-	return groups, nil
+	return totalsByTime, nil
 }
 
 func (c *BudgetConfig) roundToPeriod(t time.Time) time.Time {
-	var d time.Duration
 	switch c.aggregationPeriod() {
 	case Weekly:
 		return t.Truncate(7 * 24 * time.Hour)
@@ -188,31 +187,59 @@ func (c *BudgetConfig) roundToPeriod(t time.Time) time.Time {
 	}
 }
 
-func (ts Totals) merge() (*Total, error) {
+func (ts Totals) mergeOn(date time.Time, period Period) (*Total, error) {
 	if len(ts) == 0 {
 		return nil, fmt.Errorf("Cannot merge empty Totals.")
 	}
-	label, value := totals[0].Label, totals[0].Value
-	var (
-		absoluteTotal time.Duration
-		countTotal    int
-	)
-	for _, st := range subtotals {
-		if st.Label != label {
-			return nil, fmt.Errorf("Cannot merge SubTotals with different labels: %v and %v.", label, st.Label)
-		}
-		if st.Value != value {
-			return nil, fmt.Errorf("Cannot merge SubTotals with different label values: %v and %v for %v.", value, st.Value, label)
-		}
-		absoluteTotal = absoluteTotal.Add(st.Absolute)
-		countTotal += st.Count
+	total := &Total{
+		Date:   date,
+		Period: period,
 	}
-	relativePerSubtotal := relativeTotal / len(subs)
-	s := &SubTotal{
-		Relative: 1.0,
-		Absolute: absoluteTotal,
-		Count:    countTotal,
-		// Punting on Sub-SubTotals.
+	var label string
+	subTotalsByValue := map[string]SubTotals{}
+	for _, t := range ts {
+		total.Absolute = total.Absolute + t.Absolute
+		for _, s := range t.SubTotals {
+			if label == "" {
+				label = s.Label
+			}
+			if label != s.Label {
+				return nil, fmt.Errorf("Cannot merge SubTotals with different labels: %v and %v", label, s.Label)
+			}
+			value := s.Value
+			subTotalsByValue[value] = append(subTotalsByValue[value], s)
+		}
 	}
-	return s, nil
+	for _, ss := range subTotalsByValue {
+		s, err := ss.merge()
+		if err != nil {
+			return nil, err
+		}
+		total.SubTotals = append(total.SubTotals, s)
+	}
+	return total, nil
+}
+
+func (ss SubTotals) merge() (*SubTotal, error) {
+	if len(ss) == 0 {
+		return nil, fmt.Errorf("Cannot merge empty SubTotals.")
+	}
+	label, value := ss[0].Label, ss[0].Value
+	subTotal := &SubTotal{
+		Label: label,
+		Value: value,
+		// TODO: merge sub-subtotals
+	}
+	for _, s := range ss {
+		if s.Label != label {
+			return nil, fmt.Errorf("Cannot merge SubTotals with different labels: %v and %v", s.Label, label)
+		}
+		if s.Value != value {
+			return nil, fmt.Errorf("Cannot merge SubTotals with different values: %v and %v", s.Value, value)
+		}
+		subTotal.Absolute += s.Absolute
+		subTotal.Count += s.Count
+		subTotal.Relative += s.Relative / float64(len(ss))
+	}
+	return subTotal, nil
 }
