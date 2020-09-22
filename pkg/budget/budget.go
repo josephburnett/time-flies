@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/josephburnett/time-flies/pkg/types"
@@ -31,9 +32,9 @@ const (
 	Monthly          = "Monthly"
 	Quarterly        = "Quarterly"
 
-	defaultEntryPeriod = Weekly
-	defaultDaysPerWeek = 5
-	defaultHoursPerDay = 8
+	defaultAggregationPeriod = Weekly
+	defaultDaysPerWeek       = 5
+	defaultHoursPerDay       = 8
 )
 
 var (
@@ -44,17 +45,17 @@ var (
 )
 
 type BudgetConfig struct {
-	EntryPeriod   *Period
-	DaysPerWeek   *int
-	HoursPerDay   *int
-	LabelGrouping []string
+	AggregationPeriod *Period
+	DaysPerWeek       *int
+	HoursPerDay       *int
+	LabelGrouping     []string
 }
 
-func (c *BudgetConfig) entryPeriod() Period {
-	if c == nil || c.EntryPeriod == nil {
-		return defaultEntryPeriod
+func (c *BudgetConfig) aggregationPeriod() Period {
+	if c == nil || c.AggregationPeriod == nil {
+		return defaultAggregationPeriod
 	}
-	return *c.EntryPeriod
+	return *c.AggregationPeriod
 }
 
 func (c *BudgetConfig) daysPerWeek() int {
@@ -87,13 +88,24 @@ func (c *BudgetConfig) GetTotals(log types.Log) (Totals, error) {
 		}
 		totals = append(totals, total)
 	}
+	groups, err := c.groupTotals(totals)
+	if err != nil {
+		return nil, err
+	}
+	totals := make(Totals, 0)
+	for _, ts := range groups {
+		t, err := ts.Merge()
+		if err != nil {
+			return nil, err
+		}
+		totals = append(totals, t)
+	}
 	return totals, nil
 }
 
 func (c *BudgetConfig) getTotal(week *types.Week) (*Total, error) {
 	total := &Total{
-		Date: week.Date,
-		// assuming weekly period
+		Date:     week.Date,
 		Period:   Weekly,
 		Absolute: time.Duration(c.daysPerWeek()) * time.Duration(c.hoursPerDay()) * time.Hour,
 	}
@@ -147,4 +159,60 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 		subTotals = append(subTotals, s)
 	}
 	return subTotals, nil
+}
+
+func (c *BudgetConfig) groupTotals(totals Totals) ([]Totals, error) {
+	totalsByTime := map[time.Time]Totals{}
+	for _, total := range totals {
+		t := c.roundToPeriod(total.Date)
+		totalsByTime[t] = append(totalsByTime[t], total)
+	}
+	groups := []Totals{}
+	for _, ts := range totalsByTime {
+		groups = append(groups, ts)
+	}
+	return groups, nil
+}
+
+func (c *BudgetConfig) roundToPeriod(t time.Time) time.Time {
+	var d time.Duration
+	switch c.aggregationPeriod() {
+	case Weekly:
+		return t.Truncate(7 * 24 * time.Hour)
+	case Monthly:
+		return t.Truncate(30 * 24 * time.Hour)
+	case Quarterly:
+		return t.Truncate(90 * 24 * time.Hour)
+	default:
+		return t
+	}
+}
+
+func (ts Totals) merge() (*Total, error) {
+	if len(ts) == 0 {
+		return nil, fmt.Errorf("Cannot merge empty Totals.")
+	}
+	label, value := totals[0].Label, totals[0].Value
+	var (
+		absoluteTotal time.Duration
+		countTotal    int
+	)
+	for _, st := range subtotals {
+		if st.Label != label {
+			return nil, fmt.Errorf("Cannot merge SubTotals with different labels: %v and %v.", label, st.Label)
+		}
+		if st.Value != value {
+			return nil, fmt.Errorf("Cannot merge SubTotals with different label values: %v and %v for %v.", value, st.Value, label)
+		}
+		absoluteTotal = absoluteTotal.Add(st.Absolute)
+		countTotal += st.Count
+	}
+	relativePerSubtotal := relativeTotal / len(subs)
+	s := &SubTotal{
+		Relative: 1.0,
+		Absolute: absoluteTotal,
+		Count:    countTotal,
+		// Punting on Sub-SubTotals.
+	}
+	return s, nil
 }
