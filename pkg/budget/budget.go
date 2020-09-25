@@ -102,6 +102,11 @@ func (c *BudgetConfig) GetTotals(log types.Log) (Totals, error) {
 				return nil, err
 			}
 			totals = append(totals, t)
+			var totalRelative float64 // DO NOT SUBMIT
+			for _, s := range t.SubTotals {
+				totalRelative += s.Relative
+			}
+			fmt.Printf("aggregated total has %v\n", totalRelative)
 		}
 	}
 	return totals, nil
