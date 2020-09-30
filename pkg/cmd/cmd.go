@@ -23,14 +23,27 @@ type Config struct {
 
 var (
 	period = flag.StringP("period", "p", "", "Aggregation period.")
+	log    = flag.StringP("log", "l", "", "Log file.")
 )
+
+func getConfig() *Config {
+	cfg := &Config{}
+	if *period != "" {
+		budgetPeriod := budget.Period(*period)
+		cfg.BudgetConfig.AggregationPeriod = &budgetPeriod
+	}
+	if *log != "" {
+		cfg.FileConfig.LogFile = log
+	}
+	return cfg
+}
 
 var CmdTidy = &cobra.Command{
 	Use:   "tidy",
 	Short: "Reformats log to spark joy.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := &Config{}
+		cfg := getConfig()
 		log, err := cfg.FileConfig.Read()
 		if err != nil {
 			return err
@@ -49,7 +62,7 @@ var CmdTotals = &cobra.Command{
 	Short: "Output weekly focus totals.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := &Config{}
+		cfg := getConfig()
 		if *period != "" {
 			p := budget.Period(*period)
 			cfg.BudgetConfig.AggregationPeriod = &p
@@ -85,7 +98,7 @@ var CmdEdit = &cobra.Command{
 		if editor == "" {
 			return fmt.Errorf("no EDITOR set")
 		}
-		cfg := &Config{}
+		cfg := getConfig()
 		filename := cfg.FileConfig.GetLogFile()
 		execCmd := exec.Command(editor, filename)
 		execCmd.Stdin = os.Stdin
