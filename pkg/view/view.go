@@ -63,7 +63,7 @@ func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 	sort.Strings(sortedValues)
 	out := ""
 	for _, total := range totals {
-		line, err := c.printTotal(total, sortedValues)
+		line, err := c.sprintTotal(total, sortedValues)
 		if err != nil {
 			return "", nil
 		}
@@ -72,7 +72,7 @@ func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 	return out, nil
 }
 
-func (c *ViewConfig) printTotal(total *budget.Total, values []string) (string, error) {
+func (c *ViewConfig) sprintTotal(total *budget.Total, values []string) (string, error) {
 	screenWidth := float64(c.screenWidth())
 	widthByValue := map[string]float64{}
 	for _, sub := range total.SubTotals {

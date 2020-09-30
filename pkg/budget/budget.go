@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/josephburnett/time-flies/pkg/types"
@@ -15,13 +16,15 @@ type Total struct {
 	SubTotals []*SubTotal
 }
 
+type SubTotals []*SubTotal
+
 type SubTotal struct {
 	Label     string
 	Value     string
 	Relative  float64
 	Absolute  time.Duration
 	Count     int
-	SubTotals []*SubTotal
+	SubTotals SubTotals
 }
 
 type Period string
@@ -31,9 +34,9 @@ const (
 	Monthly          = "Monthly"
 	Quarterly        = "Quarterly"
 
-	defaultEntryPeriod = Weekly
-	defaultDaysPerWeek = 5
-	defaultHoursPerDay = 8
+	defaultAggregationPeriod = Weekly
+	defaultDaysPerWeek       = 5
+	defaultHoursPerDay       = 8
 )
 
 var (
@@ -44,17 +47,17 @@ var (
 )
 
 type BudgetConfig struct {
-	EntryPeriod   *Period
-	DaysPerWeek   *int
-	HoursPerDay   *int
-	LabelGrouping []string
+	AggregationPeriod *Period
+	DaysPerWeek       *int
+	HoursPerDay       *int
+	LabelGrouping     []string
 }
 
-func (c *BudgetConfig) entryPeriod() Period {
-	if c == nil || c.EntryPeriod == nil {
-		return defaultEntryPeriod
+func (c *BudgetConfig) aggregationPeriod() Period {
+	if c == nil || c.AggregationPeriod == nil {
+		return defaultAggregationPeriod
 	}
-	return *c.EntryPeriod
+	return *c.AggregationPeriod
 }
 
 func (c *BudgetConfig) daysPerWeek() int {
@@ -87,13 +90,26 @@ func (c *BudgetConfig) GetTotals(log types.Log) (Totals, error) {
 		}
 		totals = append(totals, total)
 	}
+	if c.aggregationPeriod() != Weekly {
+		groups, err := c.groupTotals(totals)
+		if err != nil {
+			return nil, err
+		}
+		totals = make(Totals, 0)
+		for date, ts := range groups {
+			t, err := ts.mergeOn(date, c.aggregationPeriod())
+			if err != nil {
+				return nil, err
+			}
+			totals = append(totals, t)
+		}
+	}
 	return totals, nil
 }
 
 func (c *BudgetConfig) getTotal(week *types.Week) (*Total, error) {
 	total := &Total{
-		Date: week.Date,
-		// assuming weekly period
+		Date:     week.Date,
 		Period:   Weekly,
 		Absolute: time.Duration(c.daysPerWeek()) * time.Duration(c.hoursPerDay()) * time.Hour,
 	}
@@ -147,4 +163,84 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 		subTotals = append(subTotals, s)
 	}
 	return subTotals, nil
+}
+
+func (c *BudgetConfig) groupTotals(totals Totals) (map[time.Time]Totals, error) {
+	totalsByTime := map[time.Time]Totals{}
+	for _, total := range totals {
+		t := c.roundToPeriod(total.Date)
+		totalsByTime[t] = append(totalsByTime[t], total)
+	}
+	return totalsByTime, nil
+}
+
+func (c *BudgetConfig) roundToPeriod(t time.Time) time.Time {
+	switch c.aggregationPeriod() {
+	case Weekly:
+		return t.Truncate(7 * 24 * time.Hour)
+	case Monthly:
+		return t.Truncate(30 * 24 * time.Hour)
+	case Quarterly:
+		return t.Truncate(90 * 24 * time.Hour)
+	default:
+		return t
+	}
+}
+
+func (ts Totals) mergeOn(date time.Time, period Period) (*Total, error) {
+	if len(ts) == 0 {
+		return nil, fmt.Errorf("Cannot merge empty Totals.")
+	}
+	total := &Total{
+		Date:   date,
+		Period: period,
+	}
+	var label string
+	subTotalsByValue := map[string]SubTotals{}
+	for _, t := range ts {
+		total.Absolute = total.Absolute + t.Absolute
+		for _, s := range t.SubTotals {
+			if label == "" {
+				label = s.Label
+			}
+			if label != s.Label {
+				return nil, fmt.Errorf("Cannot merge SubTotals with different labels: %v and %v", label, s.Label)
+			}
+			value := s.Value
+			subTotalsByValue[value] = append(subTotalsByValue[value], s)
+		}
+	}
+	for _, ss := range subTotalsByValue {
+		s, err := ss.merge(len(ts))
+		if err != nil {
+			return nil, err
+		}
+		total.SubTotals = append(total.SubTotals, s)
+	}
+	return total, nil
+}
+
+func (ss SubTotals) merge(lenTotals int) (*SubTotal, error) {
+	if len(ss) == 0 {
+		return nil, fmt.Errorf("Cannot merge empty SubTotals.")
+	}
+	label, value := ss[0].Label, ss[0].Value
+	subTotal := &SubTotal{
+		Label: label,
+		Value: value,
+		// TODO: merge sub-subtotals
+	}
+	for _, s := range ss {
+		if s.Label != label {
+			return nil, fmt.Errorf("Cannot merge SubTotals with different labels: %v and %v", s.Label, label)
+		}
+		if s.Value != value {
+			return nil, fmt.Errorf("Cannot merge SubTotals with different values: %v and %v", s.Value, value)
+		}
+		subTotal.Absolute += s.Absolute
+		subTotal.Count += s.Count
+		subTotal.Relative += s.Relative
+	}
+	subTotal.Relative = subTotal.Relative / float64(lenTotals)
+	return subTotal, nil
 }
