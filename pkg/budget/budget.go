@@ -102,12 +102,14 @@ func (c *BudgetConfig) GetTotals(log types.Log) (Totals, error) {
 				return nil, err
 			}
 			totals = append(totals, t)
-			var totalRelative float64 // DO NOT SUBMIT
-			for _, s := range t.SubTotals {
-				totalRelative += s.Relative
-			}
-			fmt.Printf("aggregated total has %v\n", totalRelative)
 		}
+	}
+	for _, t := range totals {
+		var totalRelative float64 // DO NOT SUBMIT
+		for _, s := range t.SubTotals {
+			totalRelative += s.Relative
+		}
+		fmt.Printf("aggregated total has %v\n", totalRelative)
 	}
 	return totals, nil
 }
@@ -131,14 +133,14 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 		return []*SubTotal{}, nil
 	}
 	key := c.labelGrouping()[groupingLevel-1]
+	subTotalsByValue := map[string]*SubTotal{}
+	doneByValue := map[string][]*types.Entry{}
 	var relativePerEntry float64
 	var absolutePerEntry time.Duration
 	if len(done) > 0 {
 		relativePerEntry = relative / float64(len(done))
 		absolutePerEntry = absolute / time.Duration(len(done))
 	}
-	subTotalsByValue := map[string]*SubTotal{}
-	doneByValue := map[string][]*types.Entry{}
 	for _, entry := range done {
 		value, ok := entry.Labels[key]
 		if !ok {
@@ -166,6 +168,13 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 		}
 		s.SubTotals = ss
 		subTotals = append(subTotals, s)
+	}
+	if len(subTotals) == 0 {
+		subTotals = append(subTotals, &SubTotal{
+			Label:    key,
+			Value:    "",
+			Relative: 1.0,
+		})
 	}
 	return subTotals, nil
 }
