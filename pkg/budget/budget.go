@@ -102,11 +102,6 @@ func (c *BudgetConfig) GetTotals(log types.Log) (Totals, error) {
 				return nil, err
 			}
 			totals = append(totals, t)
-			var totalRelative float64 // DO NOT SUBMIT
-			for _, s := range t.SubTotals {
-				totalRelative += s.Relative
-			}
-			fmt.Printf("aggregated total has %v\n", totalRelative)
 		}
 	}
 	return totals, nil
@@ -216,7 +211,7 @@ func (ts Totals) mergeOn(date time.Time, period Period) (*Total, error) {
 		}
 	}
 	for _, ss := range subTotalsByValue {
-		s, err := ss.merge()
+		s, err := ss.merge(len(ts))
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +220,7 @@ func (ts Totals) mergeOn(date time.Time, period Period) (*Total, error) {
 	return total, nil
 }
 
-func (ss SubTotals) merge() (*SubTotal, error) {
+func (ss SubTotals) merge(lenTotals int) (*SubTotal, error) {
 	if len(ss) == 0 {
 		return nil, fmt.Errorf("Cannot merge empty SubTotals.")
 	}
@@ -244,7 +239,8 @@ func (ss SubTotals) merge() (*SubTotal, error) {
 		}
 		subTotal.Absolute += s.Absolute
 		subTotal.Count += s.Count
-		subTotal.Relative += s.Relative / float64(len(ss))
+		subTotal.Relative += s.Relative
 	}
+	subTotal.Relative = subTotal.Relative / float64(lenTotals)
 	return subTotal, nil
 }

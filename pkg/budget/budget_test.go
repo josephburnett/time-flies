@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -92,7 +93,17 @@ func TestGetTotal(t *testing.T) {
 				t.Errorf("Wanted no error. Got %q", err)
 			}
 			if !got.equal(c.want) {
-				t.Errorf("Wanted %+v. Got %+v", c.want, got)
+				wantString := "nil"
+				if c.want != nil {
+					b, _ := json.Marshal(c.want)
+					wantString = string(b)
+				}
+				gotString := "nil"
+				if got != nil {
+					b, _ := json.Marshal(got)
+					gotString = string(b)
+				}
+				t.Errorf("Wanted %+v. Got %+v", wantString, gotString)
 			}
 		})
 	}
@@ -207,7 +218,17 @@ func TestTotalsMergeOn(t *testing.T) {
 				t.Errorf("Wanted no error. Got %q", err)
 			}
 			if !got.equal(c.wantTotal) {
-				t.Errorf("Wanted Total %+v. Got %+v", c.wantTotal, got)
+				wantString := "nil"
+				if c.wantTotal != nil {
+					b, _ := json.Marshal(c.wantTotal)
+					wantString = string(b)
+				}
+				gotString := "nil"
+				if got != nil {
+					b, _ := json.Marshal(got)
+					gotString = string(b)
+				}
+				t.Errorf("Wanted Total %+v. Got %+v", wantString, gotString)
 			}
 		})
 	}
@@ -216,6 +237,7 @@ func TestTotalsMergeOn(t *testing.T) {
 func TestSubTotalsMerge(t *testing.T) {
 	cases := []struct {
 		name         string
+		lenTotals    int
 		subTotals    []*SubTotal
 		wantSubTotal *SubTotal
 		wantError    bool
@@ -259,7 +281,7 @@ func TestSubTotalsMerge(t *testing.T) {
 		wantSubTotal: &SubTotal{
 			Label:    "a",
 			Value:    "1",
-			Relative: 0.5,
+			Relative: 1.0,
 			Absolute: 2 * time.Hour,
 			Count:    2,
 		},
@@ -268,7 +290,11 @@ func TestSubTotalsMerge(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			subTotals := SubTotals(c.subTotals)
-			got, err := subTotals.merge()
+			lenTotals := c.lenTotals
+			if c.lenTotals == 0 {
+				lenTotals = 1
+			}
+			got, err := subTotals.merge(lenTotals)
 			if c.wantError && err == nil {
 				t.Errorf("Wanted error. Got none.")
 			}
