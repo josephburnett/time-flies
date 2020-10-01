@@ -93,6 +93,9 @@ func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 
 func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string) (string, error) {
 	screenWidth := float64(c.screenWidth())
+	if c.focusGroup() != "" {
+		screenWidth = screenWidth / 2
+	}
 	widthByValue := map[string]float64{}
 	for _, sub := range total.SubTotals {
 		widthByValue[sub.Value] = sub.Relative * screenWidth
@@ -135,7 +138,7 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 		out += " |"
 		for _, s := range topTotal.SubTotals {
 			if s.Value == c.focusGroup() {
-				out += strings.Repeat("-", int(s.Relative*100))
+				out += strings.Repeat("-", int(s.Relative*float64(screenWidth)))
 			}
 		}
 		out += "|"
