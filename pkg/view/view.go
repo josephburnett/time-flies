@@ -58,11 +58,13 @@ func (c *ViewConfig) focusGroup() string {
 }
 
 func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
+	topLevelTotals := totals
 	if c.focusGroup() != "" {
 		focusedTotals, err := totals.Focus(c.focusGroup())
 		if err != nil {
 			return "", err
 		}
+		topLevelTotals = totals
 		totals = focusedTotals
 	}
 	uniqueValues := map[string]bool{}
@@ -77,8 +79,9 @@ func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 	}
 	sort.Strings(sortedValues)
 	out := ""
-	for _, total := range totals {
-		line, err := c.sprintTotal(total, sortedValues)
+	for i, total := range totals {
+		topTotal := topLevelTotals[i]
+		line, err := c.sprintTotal(total, topTotal, sortedValues)
 		if err != nil {
 			return "", nil
 		}
@@ -87,7 +90,7 @@ func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 	return out, nil
 }
 
-func (c *ViewConfig) sprintTotal(total *budget.Total, values []string) (string, error) {
+func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string) (string, error) {
 	screenWidth := float64(c.screenWidth())
 	widthByValue := map[string]float64{}
 	for _, sub := range total.SubTotals {
@@ -120,6 +123,15 @@ func (c *ViewConfig) sprintTotal(total *budget.Total, values []string) (string, 
 			out += "-"
 		}
 		out += colorReset
+		out += "|"
+	}
+	if total != topTotal {
+		out += "  |"
+		for _, s := range topTotal.SubTotals {
+			if s.Value == c.focusGroup() {
+				out += strings.Repeat("-", int(s.Relative*100))
+			}
+		}
 		out += "|"
 	}
 	return out, nil
