@@ -2,7 +2,6 @@ package view
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 
@@ -133,7 +132,7 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 		// TODO: fix the floating point error that makes this necessary
 		out += " "
 	}
-	out += fmt.Sprintf("  (%vd) ", int(math.Ceil(total.Absolute.Hours()/8)))
+	out += fmt.Sprintf("  (%.1fd) ", total.Absolute.Hours()/8)
 	if total != topTotal {
 		out += " |"
 		for _, s := range topTotal.SubTotals {
