@@ -2,6 +2,7 @@ package view
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -96,7 +97,7 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 	for _, sub := range total.SubTotals {
 		widthByValue[sub.Value] = sub.Relative * screenWidth
 	}
-	out := fmt.Sprintf(" %v |", total.Date.Format("Jan 02 2006"))
+	out := fmt.Sprintf(" %v   |", total.Date.Format("Jan 02 2006"))
 	var cursor float64
 	i := 0
 	for _, value := range values {
@@ -125,8 +126,13 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 		out += colorReset
 		out += "|"
 	}
+	if len(out)%2 == 1 {
+		// TODO: fix the floating point error that makes this necessary
+		out += " "
+	}
+	out += fmt.Sprintf("  (%vd) ", int(math.Ceil(total.Absolute.Hours()/8)))
 	if total != topTotal {
-		out += "  |"
+		out += " |"
 		for _, s := range topTotal.SubTotals {
 			if s.Value == c.focusGroup() {
 				out += strings.Repeat("-", int(s.Relative*100))
