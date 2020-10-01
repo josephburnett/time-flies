@@ -195,11 +195,25 @@ func (ts Totals) mergeOn(date time.Time, period Period) (*Total, error) {
 		Date:   date,
 		Period: period,
 	}
-	var label string
-	subTotalsByValue := map[string]SubTotals{}
+	ss := []SubTotals{}
 	for _, t := range ts {
 		total.Absolute = total.Absolute + t.Absolute
-		for _, s := range t.SubTotals {
+		ss = append(ss, t.SubTotals)
+	}
+	s, err := mergeByValue(ss, len(ts))
+	if err != nil {
+		return nil, err
+	}
+	total.SubTotals = s
+	return total, nil
+}
+
+func mergeByValue(sss []SubTotals, lenTotals int) (SubTotals, error) {
+	subTotals := make(SubTotals, 0)
+	var label string
+	subTotalsByValue := map[string]SubTotals{}
+	for _, ss := range sss {
+		for _, s := range ss {
 			if label == "" {
 				label = s.Label
 			}
@@ -211,13 +225,13 @@ func (ts Totals) mergeOn(date time.Time, period Period) (*Total, error) {
 		}
 	}
 	for _, ss := range subTotalsByValue {
-		s, err := ss.merge(len(ts))
+		s, err := ss.merge(lenTotals)
 		if err != nil {
 			return nil, err
 		}
-		total.SubTotals = append(total.SubTotals, s)
+		subTotals = append(subTotals, s)
 	}
-	return total, nil
+	return subTotals, nil
 }
 
 func (ss SubTotals) merge(lenTotals int) (*SubTotal, error) {
@@ -228,8 +242,8 @@ func (ss SubTotals) merge(lenTotals int) (*SubTotal, error) {
 	subTotal := &SubTotal{
 		Label: label,
 		Value: value,
-		// TODO: merge sub-subtotals
 	}
+	subSubTotals := make([]SubTotals, 0)
 	for _, s := range ss {
 		if s.Label != label {
 			return nil, fmt.Errorf("Cannot merge SubTotals with different labels: %v and %v", s.Label, label)
@@ -240,8 +254,14 @@ func (ss SubTotals) merge(lenTotals int) (*SubTotal, error) {
 		subTotal.Absolute += s.Absolute
 		subTotal.Count += s.Count
 		subTotal.Relative += s.Relative
+		subSubTotals = append(subSubTotals, s.SubTotals)
+	}
+	subTotals, err := mergeByValue(subSubTotals, lenTotals)
+	if err != nil {
+		return nil, err
 	}
 	subTotal.Relative = subTotal.Relative / float64(lenTotals)
+	subTotal.SubTotals = subTotals
 	return subTotal, nil
 }
 
