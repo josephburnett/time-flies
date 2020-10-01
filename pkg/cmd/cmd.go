@@ -22,18 +22,22 @@ type Config struct {
 }
 
 var (
-	period = flag.StringP("period", "p", "", "Aggregation period.")
+	focus  = flag.StringP("focus", "f", "", "Focus on a particular label group.")
 	log    = flag.StringP("log", "l", "", "Log file.")
+	period = flag.StringP("period", "p", "", "Aggregation period.")
 )
 
 func getConfig() *Config {
 	cfg := &Config{}
-	if *period != "" {
-		budgetPeriod := budget.Period(*period)
-		cfg.BudgetConfig.AggregationPeriod = &budgetPeriod
+	if *focus != "" {
+		cfg.ViewConfig.FocusGroup = focus
 	}
 	if *log != "" {
 		cfg.FileConfig.LogFile = log
+	}
+	if *period != "" {
+		budgetPeriod := budget.Period(*period)
+		cfg.BudgetConfig.AggregationPeriod = &budgetPeriod
 	}
 	return cfg
 }
@@ -83,10 +87,6 @@ var CmdTotals = &cobra.Command{
 		fmt.Printf("%v\n", s)
 		return nil
 	},
-}
-
-func init() {
-	CmdTidy.Flags().AddFlag(flag.Lookup("period"))
 }
 
 var CmdEdit = &cobra.Command{

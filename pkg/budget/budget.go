@@ -244,3 +244,32 @@ func (ss SubTotals) merge(lenTotals int) (*SubTotal, error) {
 	subTotal.Relative = subTotal.Relative / float64(lenTotals)
 	return subTotal, nil
 }
+
+func (ts Totals) Focus(value string) (Totals, error) {
+	focusedTotals := make(Totals, 0)
+	for _, t := range ts {
+		focusedTotal := &Total{
+			Date:   t.Date,
+			Period: t.Period,
+		}
+		focusedSubTotals := make(SubTotals, 0)
+		for _, s := range t.SubTotals {
+			if s.Value == value {
+				for _, ss := range s.SubTotals {
+					fs := &SubTotal{
+						Label:    ss.Label,
+						Value:    ss.Value,
+						Relative: ss.Relative / s.Relative,
+						Absolute: ss.Absolute,
+						Count:    ss.Count,
+					}
+					focusedTotal.Absolute += ss.Absolute
+					focusedSubTotals = append(focusedSubTotals, fs)
+				}
+			}
+		}
+		focusedTotal.SubTotals = focusedSubTotals
+		focusedTotals = append(focusedTotals, focusedTotal)
+	}
+	return focusedTotals, nil
+}

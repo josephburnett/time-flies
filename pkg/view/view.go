@@ -36,6 +36,7 @@ const (
 
 type ViewConfig struct {
 	ScreenWidth *int
+	FocusGroup  *string
 }
 
 func (c *ViewConfig) screenWidth() int {
@@ -49,7 +50,21 @@ func (c *ViewConfig) screenWidth() int {
 	return w
 }
 
+func (c *ViewConfig) focusGroup() string {
+	if c == nil || c.FocusGroup == nil {
+		return ""
+	}
+	return *c.FocusGroup
+}
+
 func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
+	if c.focusGroup() != "" {
+		focusedTotals, err := totals.Focus(c.focusGroup())
+		if err != nil {
+			return "", err
+		}
+		totals = focusedTotals
+	}
 	uniqueValues := map[string]bool{}
 	for _, t := range totals {
 		for _, s := range t.SubTotals {
