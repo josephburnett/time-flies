@@ -135,11 +135,15 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 	out += fmt.Sprintf("  (%.1fd) ", total.Absolute.Hours()/8)
 	if total != topTotal {
 		out += " |"
+		var topTotalWidth int
 		for _, s := range topTotal.SubTotals {
 			if s.Value == c.focusGroup() {
-				out += strings.Repeat("-", int(s.Relative*float64(screenWidth)))
+				topTotalWidth = int(s.Relative * float64(screenWidth))
+				out += strings.Repeat("-", topTotalWidth)
 			}
 		}
+		out += "|"
+		out += strings.Repeat(" ", int(screenWidth)-topTotalWidth)
 		out += "|"
 	}
 	return out, nil
