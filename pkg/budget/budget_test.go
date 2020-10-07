@@ -2,6 +2,7 @@ package budget
 
 import (
 	"encoding/json"
+	"sort"
 	"testing"
 	"time"
 
@@ -325,6 +326,8 @@ func (t1 *Total) equal(t2 *Total) bool {
 	case len(t1.SubTotals) != len(t2.SubTotals):
 		return false
 	default:
+		sort.Slice(t1.SubTotals, func(i, j int) bool { return t1.SubTotals[i].Label < t1.SubTotals[j].Label })
+		sort.Slice(t2.SubTotals, func(i, j int) bool { return t2.SubTotals[i].Label < t2.SubTotals[j].Label })
 		for i, ts1 := range t1.SubTotals {
 			ts2 := t2.SubTotals[i]
 			if !ts1.equal(ts2) {
