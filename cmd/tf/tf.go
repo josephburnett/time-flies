@@ -14,5 +14,6 @@ func main() {
 	root.AddCommand(cmd.CmdTidy)
 	root.AddCommand(cmd.CmdTotals)
 	root.AddCommand(cmd.CmdEdit)
+	root.AddCommand(cmd.CmdTodo)
 	root.Execute()
 }

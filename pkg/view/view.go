@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/josephburnett/time-flies/pkg/budget"
+	"github.com/josephburnett/time-flies/pkg/types"
 )
 
 const (
@@ -55,6 +56,19 @@ func (c *ViewConfig) focusGroup() string {
 		return ""
 	}
 	return *c.FocusGroup
+}
+
+func (c *ViewConfig) SprintTodo(log types.Log) (string, error) {
+	out := ""
+	for _, week := range log {
+		if len(week.Todo) > 0 {
+			out += fmt.Sprintf("%v\n", week.Date.Format("Jan 02 2006"))
+			for _, entry := range week.Todo {
+				out += fmt.Sprintf("[ ] %v\n", entry.Line)
+			}
+		}
+	}
+	return out, nil
 }
 
 func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
