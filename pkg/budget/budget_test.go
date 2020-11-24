@@ -309,6 +309,137 @@ func TestSubTotalsMerge(t *testing.T) {
 	}
 }
 
+func TestEntryTimes(t *testing.T) {
+	cases := []struct {
+		name     string
+		relative float64
+		absolute time.Duration
+		done     []*types.Entry
+		want     []*entryTime
+		wantErr  bool
+	}{{
+		name:     "fuzzy expands",
+		relative: 0.5,
+		absolute: 8 * time.Hour,
+		done: []*types.Entry{
+			entry("", "1h"),
+			entry("", "1h"),
+		},
+		want: []*entryTime{
+			entryT(0.25, 0, 4*time.Hour),
+			entryT(0.25, 0, 4*time.Hour),
+		},
+	}, {
+		name:     "fuzzy contracts",
+		relative: 0.5,
+		absolute: 8 * time.Hour,
+		done: []*types.Entry{
+			entry("", "6h"),
+			entry("", "6h"),
+		},
+		want: []*entryTime{
+			entryT(0.25, 0, 4*time.Hour),
+			entryT(0.25, 0, 4*time.Hour),
+		},
+	}, {
+		name:     "strict expands",
+		relative: 0.5,
+		absolute: 8 * time.Hour,
+		done: []*types.Entry{
+			entry("1h", ""),
+			entry("1h", ""),
+		},
+		want: []*entryTime{
+			entryT(0.25, 4*time.Hour, 0),
+			entryT(0.25, 4*time.Hour, 0),
+		},
+	}, {
+		name:     "strict contracts",
+		relative: 0.5,
+		absolute: 8 * time.Hour,
+		done: []*types.Entry{
+			entry("6h", ""),
+			entry("6h", ""),
+		},
+		want: []*entryTime{
+			entryT(0.25, 4*time.Hour, 0),
+			entryT(0.25, 4*time.Hour, 0),
+		},
+	}, {
+		name:     "expands only fuzzy",
+		relative: 1.0,
+		absolute: 10 * time.Hour,
+		done: []*types.Entry{
+			entry("1h", ""),
+			entry("", "1h"),
+		},
+		want: []*entryTime{
+			entryT(0.1, time.Hour, 0),
+			entryT(0.9, 0, 9*time.Hour),
+		},
+	}, {
+		name:     "contracts only fuzzy",
+		relative: 1.0,
+		absolute: 10 * time.Hour,
+		done: []*types.Entry{
+			entry("9h", ""),
+			entry("", "9h"),
+		},
+		want: []*entryTime{
+			entryT(0.9, 9*time.Hour, 0),
+			entryT(0.1, 0, time.Hour),
+		},
+	}}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			entryTimes, err := (*BudgetConfig)(nil).entryTimes(c.relative, c.absolute, c.done)
+			if err != nil && !c.wantErr {
+				t.Errorf("wanted no error. got %v", err)
+			}
+			if err == nil && c.wantErr {
+				t.Errorf("wanted error. got nil")
+			}
+			if len(c.want) != len(entryTimes) {
+				t.Errorf("wanted %v entries. got %v", len(c.want), len(entryTimes))
+				return
+			}
+			for i, e := range entryTimes {
+				if want := c.want[i].relative; want != e.relative {
+					t.Errorf("[%v] wanted relative %v. got %v", i, want, e.relative)
+				}
+				if want := c.want[i].strict; want != e.strict {
+					t.Errorf("[%v] wanted strict %v. got %v", i, want, e.strict)
+				}
+				if want := c.want[i].fuzzy; want != e.fuzzy {
+					t.Errorf("[%v] wanted fuzzy %v. got %v", i, want, e.fuzzy)
+				}
+			}
+		})
+	}
+}
+
+func entry(strict, fuzzy string) *types.Entry {
+	labels := map[string]string{}
+	if strict != "" {
+		labels["t"] = strict
+	}
+	if fuzzy != "" {
+		labels["f"] = fuzzy
+	}
+	return &types.Entry{
+		Labels: labels,
+	}
+}
+
+func entryT(relative float64, strict, fuzzy time.Duration) *entryTime {
+	return &entryTime{
+		relative: relative,
+		strict:   strict,
+		fuzzy:    fuzzy,
+	}
+}
+
 func (t1 *Total) equal(t2 *Total) bool {
 	switch {
 	case t1 == nil && t2 == nil:

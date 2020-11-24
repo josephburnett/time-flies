@@ -37,6 +37,7 @@ const (
 	defaultAggregationPeriod = Weekly
 	defaultDaysPerWeek       = 5
 	defaultHoursPerDay       = 8
+	defaultMinutesPerEntry   = 30
 )
 
 var (
@@ -50,6 +51,7 @@ type BudgetConfig struct {
 	AggregationPeriod *Period
 	DaysPerWeek       *int
 	HoursPerDay       *int
+	MinutesPerEntry   *int
 	LabelGrouping     []string
 }
 
@@ -72,6 +74,13 @@ func (c *BudgetConfig) hoursPerDay() int {
 		return defaultHoursPerDay
 	}
 	return *c.HoursPerDay
+}
+
+func (c *BudgetConfig) minutesPerEntry() int {
+	if c == nil || c.MinutesPerEntry == nil {
+		return defaultMinutesPerEntry
+	}
+	return *c.MinutesPerEntry
 }
 
 func (c *BudgetConfig) labelGrouping() []string {
@@ -126,16 +135,14 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 		return []*SubTotal{}, nil
 	}
 	key := c.labelGrouping()[groupingLevel-1]
-	var relativePerEntry float64
-	var absolutePerEntry time.Duration
-	if len(done) > 0 {
-		relativePerEntry = relative / float64(len(done))
-		absolutePerEntry = absolute / time.Duration(len(done))
+	entryTimes, err := c.entryTimes(relative, absolute, done)
+	if err != nil {
+		return nil, err
 	}
 	subTotalsByValue := map[string]*SubTotal{}
 	doneByValue := map[string][]*types.Entry{}
-	for _, entry := range done {
-		value, ok := entry.Labels[key]
+	for _, entry := range entryTimes {
+		value, ok := entry.entry.Labels[key]
 		if !ok {
 			value = ""
 		}
@@ -148,10 +155,10 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 			}
 			subTotalsByValue[value] = s
 		}
-		s.Relative += relativePerEntry
-		s.Absolute += absolutePerEntry
+		s.Relative += entry.relative
+		s.Absolute += entry.strict + entry.fuzzy
 		s.Count += 1
-		doneByValue[value] = append(doneByValue[value], entry)
+		doneByValue[value] = append(doneByValue[value], entry.entry)
 	}
 	subTotals := []*SubTotal{}
 	for _, s := range subTotalsByValue {
@@ -163,6 +170,70 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 		subTotals = append(subTotals, s)
 	}
 	return subTotals, nil
+}
+
+type entryTime struct {
+	entry    *types.Entry
+	relative float64
+	strict   time.Duration
+	fuzzy    time.Duration
+}
+
+func (c *BudgetConfig) entryTimes(relative float64, absolute time.Duration, done []*types.Entry) (entryTimes []*entryTime, err error) {
+	if len(done) == 0 {
+		return
+	}
+	var strictTotal time.Duration
+	var fuzzyTotal time.Duration
+	for _, entry := range done {
+		et := &entryTime{
+			entry: entry,
+		}
+		if f, ok := entry.Labels["f"]; ok {
+			et.fuzzy, err = time.ParseDuration(f)
+			if err != nil {
+				return nil, fmt.Errorf("malformed 'f': %v", err)
+			}
+		}
+		if t, ok := entry.Labels["t"]; ok {
+			et.strict, err = time.ParseDuration(t)
+			if err != nil {
+				return nil, fmt.Errorf("malformed 't': %v", err)
+			}
+		}
+		if et.strict == 0 && et.fuzzy == 0 {
+			et.fuzzy = time.Duration(c.minutesPerEntry()) * time.Minute
+		}
+		strictTotal += et.strict
+		fuzzyTotal += et.fuzzy
+		entryTimes = append(entryTimes, et)
+	}
+	// Compress strict and fuzzy time when overcommited.
+	// Or expand strict time when there is no fuzzy time.
+	if strictTotal >= absolute || fuzzyTotal == time.Duration(0) {
+		compressionRatio := float64(absolute) / float64(strictTotal+fuzzyTotal)
+		strictTotal = time.Duration(0)
+		fuzzyTotal = time.Duration(0)
+		for _, et := range entryTimes {
+			et.strict = time.Duration(float64(et.strict) * compressionRatio)
+			et.fuzzy = time.Duration(float64(et.fuzzy) * compressionRatio)
+			strictTotal += et.strict
+			fuzzyTotal += et.fuzzy
+		}
+	}
+	// Compress or expand fuzzy time to fit
+	if fuzzyTotal != 0 {
+		targetFuzzyTotal := absolute - strictTotal
+		compressionRatio := float64(targetFuzzyTotal) / float64(fuzzyTotal)
+		for _, et := range entryTimes {
+			et.fuzzy = time.Duration(float64(et.fuzzy) * compressionRatio)
+		}
+	}
+	// Distribute relative by absolute ratios
+	for _, et := range entryTimes {
+		et.relative = relative * (float64(et.strict+et.fuzzy) / float64(absolute))
+	}
+	return
 }
 
 func (c *BudgetConfig) groupTotals(totals Totals) (map[time.Time]Totals, error) {
