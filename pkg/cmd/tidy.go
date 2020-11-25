@@ -11,7 +11,10 @@ var CmdTidy = &cobra.Command{
 	Short: "Reformats log to spark joy.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		log, err := cfg.FileConfig.Read()
 		if err != nil {
 			return err

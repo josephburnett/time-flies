@@ -17,7 +17,10 @@ var CmdEdit = &cobra.Command{
 		if editor == "" {
 			return fmt.Errorf("no EDITOR set")
 		}
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		filename := cfg.FileConfig.GetLogFile()
 		execCmd := exec.Command(editor, filename)
 		execCmd.Stdin = os.Stdin

@@ -12,7 +12,10 @@ var CmdTodo = &cobra.Command{
 	Short: "List TODO entries.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		log, err := cfg.FileConfig.Read()
 		if err != nil {
 			return err

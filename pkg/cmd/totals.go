@@ -12,7 +12,10 @@ var CmdTotals = &cobra.Command{
 	Short: "Output weekly focus totals.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		log, err := cfg.FileConfig.Read()
 		if err != nil {
 			return err

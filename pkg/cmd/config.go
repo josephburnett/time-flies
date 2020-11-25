@@ -1,6 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+
 	"github.com/josephburnett/time-flies/pkg/budget"
 	"github.com/josephburnett/time-flies/pkg/file"
 	"github.com/josephburnett/time-flies/pkg/tidy"
@@ -16,14 +21,39 @@ type Config struct {
 }
 
 var (
+	config = flag.StringP("config", "c", "", "Config file. JSON serialization of pkg/cmd/Config.")
 	focus  = flag.StringP("focus", "f", "", "Focus on a particular label group.")
 	group  = flag.StringSliceP("group", "g", []string{}, "Group entries by labels.")
 	log    = flag.StringP("log", "l", "", "Log file.")
 	period = flag.StringP("period", "p", "", "Aggregation period.")
 )
 
-func getConfig() *Config {
+const (
+	defaultConfigFile = ".tf/config"
+)
+
+func getConfig() (*Config, error) {
+	home := os.Getenv("HOME")
+	configFile := fmt.Sprintf("%v/%v", home, defaultConfigFile)
+	mustExist := false
+	if *config != "" {
+		configFile = *config
+		mustExist = true
+	}
 	cfg := &Config{}
+	b, err := ioutil.ReadFile(configFile)
+	if mustExist && os.IsNotExist(err) {
+		// We don't have a file and we need one
+		return nil, err
+	}
+	if err == nil {
+		// We have a file
+		err = json.Unmarshal(b, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read config file %q: %v", configFile, err)
+		}
+	}
+
 	if *focus != "" {
 		cfg.ViewConfig.FocusGroup = focus
 	}
@@ -37,5 +67,5 @@ func getConfig() *Config {
 		budgetPeriod := budget.Period(*period)
 		cfg.BudgetConfig.AggregationPeriod = &budgetPeriod
 	}
-	return cfg
+	return cfg, nil
 }
