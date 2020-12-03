@@ -113,7 +113,7 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 	for _, sub := range total.SubTotals {
 		widthByValue[sub.Value] = sub.Relative * screenWidth
 	}
-	out := fmt.Sprintf(" %v   |", total.Date.Format("Jan 02 2006"))
+	out := fmt.Sprintf("%v %v   |", colorReset, total.Date.Format("Jan 02 2006"))
 	var cursor float64
 	i := 0
 	for _, value := range values {
@@ -146,7 +146,7 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 		// TODO: fix the floating point error that makes this necessary
 		out += " "
 	}
-	out += fmt.Sprintf("  (%.1fd) ", total.Absolute.Hours()/8)
+	out += fmt.Sprintf("%v   %.1fd fx=%.1f", colorGrey, total.Absolute.Hours()/8, total.Ratio)
 	if total != topTotal {
 		out += " |"
 		var topTotalWidth int
@@ -160,5 +160,6 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 		out += strings.Repeat(" ", int(screenWidth)-topTotalWidth)
 		out += "|"
 	}
+	out += colorReset
 	return out, nil
 }

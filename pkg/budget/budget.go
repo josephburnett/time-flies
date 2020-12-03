@@ -14,6 +14,7 @@ type Total struct {
 	Period    Period
 	Absolute  time.Duration
 	SubTotals []*SubTotal
+	Ratio     float64
 }
 
 type SubTotals []*SubTotal
@@ -122,22 +123,23 @@ func (c *BudgetConfig) getTotal(week *types.Week) (*Total, error) {
 		Period:   Weekly,
 		Absolute: time.Duration(c.daysPerWeek()) * time.Duration(c.hoursPerDay()) * time.Hour,
 	}
-	subTotals, err := c.getSubTotals(1, 1.0, total.Absolute, week.Done)
+	subTotals, compressionRatio, err := c.getSubTotals(1, 1.0, total.Absolute, week.Done)
 	if err != nil {
 		return nil, err
 	}
 	total.SubTotals = subTotals
+	total.Ratio = compressionRatio
 	return total, nil
 }
 
-func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolute time.Duration, done []*types.Entry) ([]*SubTotal, error) {
+func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolute time.Duration, done []*types.Entry) ([]*SubTotal, float64, error) {
 	if groupingLevel > len(c.labelGrouping()) {
-		return []*SubTotal{}, nil
+		return []*SubTotal{}, 0, nil
 	}
 	key := c.labelGrouping()[groupingLevel-1]
-	entryTimes, err := c.entryTimes(relative, absolute, done)
+	entryTimes, compressionRatio, err := c.entryTimes(relative, absolute, done)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	subTotalsByValue := map[string]*SubTotal{}
 	doneByValue := map[string][]*types.Entry{}
@@ -162,14 +164,14 @@ func (c *BudgetConfig) getSubTotals(groupingLevel int, relative float64, absolut
 	}
 	subTotals := []*SubTotal{}
 	for _, s := range subTotalsByValue {
-		ss, err := c.getSubTotals(groupingLevel+1, s.Relative, s.Absolute, doneByValue[s.Value])
+		ss, _, err := c.getSubTotals(groupingLevel+1, s.Relative, s.Absolute, doneByValue[s.Value])
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		s.SubTotals = ss
 		subTotals = append(subTotals, s)
 	}
-	return subTotals, nil
+	return subTotals, compressionRatio, nil
 }
 
 type entryTime struct {
@@ -179,12 +181,13 @@ type entryTime struct {
 	fuzzy    time.Duration
 }
 
-func (c *BudgetConfig) entryTimes(relative float64, absolute time.Duration, done []*types.Entry) (entryTimes []*entryTime, err error) {
+func (c *BudgetConfig) entryTimes(relative float64, absolute time.Duration, done []*types.Entry) (entryTimes []*entryTime, compressionRatio float64, err error) {
 	if len(done) == 0 {
 		return
 	}
 	var strictTotal time.Duration
 	var fuzzyTotal time.Duration
+	compressionRatio = 1.0
 	for _, entry := range done {
 		et := &entryTime{
 			entry: entry,
@@ -192,13 +195,13 @@ func (c *BudgetConfig) entryTimes(relative float64, absolute time.Duration, done
 		if f, ok := entry.Labels["f"]; ok {
 			et.fuzzy, err = time.ParseDuration(f)
 			if err != nil {
-				return nil, fmt.Errorf("malformed 'f': %v", err)
+				return nil, 0, fmt.Errorf("malformed 'f': %v", err)
 			}
 		}
 		if t, ok := entry.Labels["t"]; ok {
 			et.strict, err = time.ParseDuration(t)
 			if err != nil {
-				return nil, fmt.Errorf("malformed 't': %v", err)
+				return nil, 0, fmt.Errorf("malformed 't': %v", err)
 			}
 		}
 		if et.strict == 0 && et.fuzzy == 0 {
@@ -211,7 +214,7 @@ func (c *BudgetConfig) entryTimes(relative float64, absolute time.Duration, done
 	// Compress strict and fuzzy time when overcommited.
 	// Or expand strict time when there is no fuzzy time.
 	if strictTotal >= absolute || fuzzyTotal == time.Duration(0) {
-		compressionRatio := float64(absolute) / float64(strictTotal+fuzzyTotal)
+		compressionRatio = float64(absolute) / float64(strictTotal+fuzzyTotal)
 		strictTotal = time.Duration(0)
 		fuzzyTotal = time.Duration(0)
 		for _, et := range entryTimes {
@@ -224,7 +227,7 @@ func (c *BudgetConfig) entryTimes(relative float64, absolute time.Duration, done
 	// Compress or expand fuzzy time to fit
 	if fuzzyTotal != 0 {
 		targetFuzzyTotal := absolute - strictTotal
-		compressionRatio := float64(targetFuzzyTotal) / float64(fuzzyTotal)
+		compressionRatio = float64(targetFuzzyTotal) / float64(fuzzyTotal)
 		for _, et := range entryTimes {
 			et.fuzzy = time.Duration(float64(et.fuzzy) * compressionRatio)
 		}
