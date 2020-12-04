@@ -42,6 +42,10 @@ meet about repeated bug http://bug/9012                       ## cat=customer su
 # bug report cleanup                                          ##
 ```
 
+Output of `tf tots`:
+
+![example of tf tots](example/tots.png)
+
 ## Philosophy
 
 Time Flies tracks focus time. All the hours of the workday are accounted for by tracking the ratio of focus on various categories of activity. Some activities involve a period of focus as well as some "fuzzy" time surrounding them. Such activites are recorded as fuzzy time (e.g. `f=1h`) from which categories for all hours of the work week are extrapolated. Activies are weighted by time which is a proxy for focus. But some activites simply require a fixed amount of time in which case they are taken literally (e.g. `t=45m`).
