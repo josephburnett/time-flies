@@ -44,6 +44,12 @@ meet about repeated bug http://bug/9012                       ## cat=customer su
 
 ## Philosophy
 
+Time Flies tracks focus time. All the hours of the workday are accounted for by tracking the ratio of focus on various categories of activity. Some activities involve a period of focus as well as some "fuzzy" time surrounding them. Such activites are recorded as fuzzy time (e.g. `f=1h`) from which categories for all hours of the work week are extrapolated. Activies are weighted by time which is a proxy for focus. But some activites simply require a fixed amount of time in which case they are taken literally (e.g. `t=45m`).
+
+The insights given by `tf` are only as good as the categories chosen and the quality of the log file. The format of the log file is chosen to be as simple and easy to maintain as possible. It's essentially the log I was keeping anyway (a.k.a. snippets) with some tags at the end. However the specific category and sub-category values took some long time and reflection to produce.
+
+### My Categories
+
 # Commands
 
 ## tots
