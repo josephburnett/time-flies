@@ -54,20 +54,34 @@ I've budgeted my categories ahead of time.  E.g. I know I want to spend at least
 
 I have quite a few sub-categories as well (e.g. `sub=planning`). Some are specific projects which exist within a single category and some are common across categories. I can drill down on a category to see what sub-category activites account for the time with the `tf tots -f <category>` command.
 
-Output of `tf tots -f primary`:
+# Commands
+
+## tots
+
+The `tots` command outputs weekly focus totals.
+
+![example of tf tots](example/tots.png)
+
+To drill down on a category, use the `-f <category>` flag.  E.g. `tf tots -f primary`:
 
 ![example of tf tots -f primary](example/focus.png)
 
 Focus view (`tots -f`) is the same as the default `tots` view except that an additional bar is added on the right to show much of the overall time is represented on the left (to keep things in persepctive).
 
-# Commands
-
-## tots
-
 ## edit
+
+The `edit` command opens the log file for editing in your prefered text editor, determined by the `EDITOR` environment variable.
 
 ## tidy
 
+The `tidy` command reformats the log by lining up the tags, formatting the dates consistently, and placing all TODO items after the completed entries.
+
 ## todo
+
+The `todo` command prints a log of TODO entries. An entry is TODO when the line begins with a `#` character.
+
+# Log File
+
+The log file is a Unix [record jar](http://www.catb.org/~esr/writings/taoup/html/ch05s02.html#id2906931). It consists of RFC 822 entries separated by a `%%\n` sequence, one per week. The body consists of entries, one per line. Entries consist of two parts separated by a `##` sequence, the line and the tags. Tags are alphanumeric key and value pairs, joined by the `=` sign and separated by whitespace.
 
 # Customization
