@@ -1,22 +1,13 @@
-Date: September 7, 2020
+Date: Nov 23 2020
 
-feed the dog ## cat=home sub=dinner
-feed the cat ## cat=home sub=lunch
-email bob ## cat=work sub=tables
-# do the thing ## cat=work sub=tables
-# try harder
+find other controllers with the same defect http://bug/1234   ## cat=customer sub=ops f=1h
+prepare for eng review http://link/my-design                  ## cat=primary sub=thing-one f=3h
+vision for my tool https://chat/group/abcd/message/1234       ## cat=community sub=docs
+provide customer with advice on the thing http://bug/5678     ## cat=customer sub=ops
+read about https://github.com/interesting-project             ## cat=community sub=group
+create release coordination doc http://doc/release-the-thing  ## cat=primary sub=thing-two f=1h
+meet about repeated bug http://bug/9012                       ## cat=customer sub=ops t=45m
+# review http://doc/really-interesting-idea                   ##
+# look at http://bug/3456 boxes within boxes                  ##
+# bug report cleanup                                          ##
 
-%%
-Date: September 14, 2020
-Labels: cat=work
-
-# succeed
-# email success ## sub=tables
-
-%%
-Date: September 21, 2020
-
-hard work 1 ## cat=work sub=one
-hard work 2 ## cat=work sub=two
-hard work 3 ## cat=work sub=three
-hard work 3.1 ## cat=work sub=three
