@@ -27,20 +27,7 @@ Time Flies (`tf`) is a text-oriented tool for keeping track of focus time. The c
 
 ## Example Log
 
-```
-Date: Nov 23 2020
-
-find other controllers with the same defect http://bug/1234   ## cat=customer sub=ops f=1h
-prepare for eng review http://link/my-design                  ## cat=primary sub=thing-one f=3h
-vision for my tool https://chat/group/abcd/message/1234       ## cat=community sub=docs
-provide customer with advice on the thing http://bug/5678     ## cat=customer sub=ops
-read about https://github.com/interesting-project             ## cat=community sub=group
-create release coordination doc http://doc/release-the-thing  ## cat=primary sub=thing-two f=1h
-meet about repeated bug http://bug/9012                       ## cat=customer sub=ops t=45m
-# review http://doc/really-interesting-idea                   ##
-# look at http://bug/3456 boxes within boxes                  ##
-# bug report cleanup                                          ##
-```
+![example log](example/log.png)
 
 Output of `tf tots`:
 
