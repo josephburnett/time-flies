@@ -146,7 +146,10 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 		// TODO: fix the floating point error that makes this necessary
 		out += " "
 	}
-	out += fmt.Sprintf("%v   %.1fd fx=%.1f", colorGrey, total.Absolute.Hours()/8, total.Ratio)
+	out += fmt.Sprintf("%v   %.1fd", colorGrey, total.Absolute.Hours()/8)
+	if total.Ratio != 0.0 {
+		out += fmt.Sprintf(" fx=%.1f", total.Ratio)
+	}
 	if total != topTotal {
 		out += " |"
 		var topTotalWidth int
