@@ -30,14 +30,21 @@ var colorIndex = []string{
 	colorCyan,
 }
 
+type Format string
+
 const (
-	defaultScreenWidth = 100
-	minScreenWidth     = 20
+	LineFormat   Format = "Line"
+	NumberFormat Format = "Num"
+
+	defaultOutputFormat = LineFormat
+	defaultScreenWidth  = 100
+	minScreenWidth      = 20
 )
 
 type ViewConfig struct {
-	ScreenWidth *int
-	FocusGroup  *string
+	FocusGroup   *string
+	OutputFormat *string
+	ScreenWidth  *int
 }
 
 func (c *ViewConfig) screenWidth() int {
@@ -49,6 +56,13 @@ func (c *ViewConfig) screenWidth() int {
 		return minScreenWidth
 	}
 	return w
+}
+
+func (c *ViewConfig) outputFormat() Format {
+	if c == nil || c.OutputFormat == nil {
+		return defaultOutputFormat
+	}
+	return Format(*c.OutputFormat)
 }
 
 func (c *ViewConfig) focusGroup() string {
@@ -97,7 +111,7 @@ func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 		topTotal := topLevelTotals[i]
 		line, err := c.sprintTotal(total, topTotal, sortedValues)
 		if err != nil {
-			return "", nil
+			return "", err
 		}
 		out += line + "\n"
 	}
@@ -105,13 +119,19 @@ func (c *ViewConfig) SprintTotals(totals budget.Totals) (string, error) {
 }
 
 func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string) (string, error) {
+	format := c.outputFormat()
+	if format != LineFormat && format != NumberFormat {
+		return "", fmt.Errorf("unsupported format: %v", c.OutputFormat)
+	}
 	screenWidth := float64(c.screenWidth())
 	if c.focusGroup() != "" {
 		screenWidth = screenWidth / 2
 	}
 	widthByValue := map[string]float64{}
+	relativeByValue := map[string]float64{}
 	for _, sub := range total.SubTotals {
 		widthByValue[sub.Value] = sub.Relative * screenWidth
+		relativeByValue[sub.Value] = sub.Relative
 	}
 	out := fmt.Sprintf("%v %v   |", colorReset, total.Date.Format("Jan 02 2006"))
 	var cursor float64
@@ -128,16 +148,26 @@ func (c *ViewConfig) sprintTotal(total, topTotal *budget.Total, values []string)
 		}
 		chars := int(cursor+width) - int(cursor)
 		cursor += width
-		if len(value) > chars {
-			value = value[:chars]
+		if format == LineFormat {
+			if len(value) > chars {
+				value = value[:chars]
+			}
+			pad := chars - len(value)
+			out += color
+			out += strings.Repeat("-", pad/2)
+			out += value
+			out += strings.Repeat("-", pad/2)
+			if pad%2 == 1 {
+				out += "-"
+			}
 		}
-		pad := chars - len(value)
-		out += color
-		out += strings.Repeat("-", pad/2)
-		out += value
-		out += strings.Repeat("-", pad/2)
-		if pad%2 == 1 {
-			out += "-"
+		if format == NumberFormat {
+			if relativeByValue[value] > 0.0 {
+				out += color
+			} else {
+				out += colorGrey
+			}
+			out += fmt.Sprintf(" %v (%3d%%) ", value, int(relativeByValue[value]*100))
 		}
 		out += colorReset
 		out += "|"
