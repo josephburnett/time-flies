@@ -46,7 +46,7 @@ func (c *TidyConfig) printWeek(week *types.Week) (string, error) {
 		}
 	}
 	for _, entry := range week.Done {
-		out += entry.Line
+		out += fmt.Sprintf("[x] %v", entry.Line)
 		out += strings.Repeat(" ", maxWidth-len(entry.Line))
 		s, err := c.printLabels(entry.Labels)
 		if err != nil {
@@ -55,8 +55,8 @@ func (c *TidyConfig) printWeek(week *types.Week) (string, error) {
 		out += fmt.Sprintf("  ##%v\n", s)
 	}
 	for _, entry := range week.Todo {
-		out += fmt.Sprintf("# %v", entry.Line)
-		out += strings.Repeat(" ", maxWidth-len(entry.Line)-2)
+		out += fmt.Sprintf("[ ] %v", entry.Line)
+		out += strings.Repeat(" ", maxWidth-len(entry.Line))
 		s, err := c.printLabels(entry.Labels)
 		if err != nil {
 			return "", err

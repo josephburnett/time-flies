@@ -107,13 +107,21 @@ func (c *FileConfig) parseDate(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("could not parse date: %v", s)
 }
 
-func (c *FileConfig) ParseEntry(line string) (*types.Entry, bool, error) {
-	done := true
-	line = c.dewhite(line)
-	if len(line) > 1 && line[0] == '#' {
-		done = false
-		line = strings.TrimSpace(line[1:])
+func (c *FileConfig) isDone(line string) (todo bool, rest string) {
+	if strings.HasPrefix(line, "[ ]") {
+		return false, strings.TrimSpace(line[3:])
 	}
+	if strings.HasPrefix(line, "[x]") {
+		return true, strings.TrimSpace(line[3:])
+	}
+	if strings.HasPrefix(line, "#") {
+		return false, strings.TrimSpace(line[1:])
+	}
+	return true, line
+}
+
+func (c *FileConfig) ParseEntry(line string) (*types.Entry, bool, error) {
+	done, line := c.isDone(c.dewhite(line))
 	components := strings.Split(line, "##")
 	if len(components) == 1 {
 		return &types.Entry{
