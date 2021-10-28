@@ -17,7 +17,8 @@ const (
 )
 
 type FileConfig struct {
-	LogFile *string
+	LogFile  *string
+	OrgFiles []string
 }
 
 func (c *FileConfig) GetLogFile() string {
@@ -29,6 +30,18 @@ func (c *FileConfig) GetLogFile() string {
 }
 
 func (c *FileConfig) Read() (types.Log, error) {
+	l, err := c.ReadLog()
+	if err != nil {
+		return nil, err
+	}
+	o, err := c.ReadOrg()
+	if err != nil {
+		return nil, err
+	}
+	return mergeLogs(l, o), nil
+}
+
+func (c *FileConfig) ReadLog() (types.Log, error) {
 	bs, err := ioutil.ReadFile(c.GetLogFile())
 	if err != nil {
 		return nil, err

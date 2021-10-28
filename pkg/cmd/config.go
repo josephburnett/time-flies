@@ -25,6 +25,7 @@ var (
 	focus  = flag.StringP("focus", "f", "", "Focus on a particular label group.")
 	group  = flag.StringSliceP("group", "g", []string{}, "Group entries by labels.")
 	log    = flag.StringP("log", "l", "", "Log file.")
+	org    = flag.StringSliceP("org", "r", []string{}, "Org mode file.")
 	output = flag.StringP("output", "o", "", "Output format.")
 	period = flag.StringP("period", "p", "", "Aggregation period.")
 )
@@ -63,6 +64,9 @@ func getConfig() (*Config, error) {
 	}
 	if *log != "" {
 		cfg.FileConfig.LogFile = log
+	}
+	if len(*org) > 0 {
+		cfg.FileConfig.OrgFiles = *org
 	}
 	if *output != "" {
 		cfg.ViewConfig.OutputFormat = output
